@@ -350,7 +350,7 @@ library("shinyBS")
 
               HTML('<p><div align = "center"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/kmPlot.jpg" width="300" height="200" ></td><td><img src="images/schoenfeldPlot.jpg" width="300" height="200"></td><td><img src="images/lmlPlot.jpg" width="300" height="200"></td></tr></table></div></p>'),
 
-              HTML('<p><b>License:</b> This sweb-tool as a whole is distributed under GPL-3 (General Public License Version 3).</p>'),
+              HTML('<p><b>License:</b> This web-tool as a whole is distributed under GPL-3 (General Public License Version 3).</p>'),
 
               HTML('<p><b>Disclaimer:</b> This server is intended for research purposes only, not for clinical or commercial use. It is a non-profit service to the scientific community, provided on an "AS-IS " basis without any warranty, expressed or implied. The authors can not be held liable in any way for the service provided here.</p>')
 
