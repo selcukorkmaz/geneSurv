@@ -11,9 +11,23 @@ library("shinyBS")
 
       conditionalPanel(condition="input.tabs1=='About'",
         
-        HTML('<center><img src="images/logoSurv.jpg" width=250 height=250></center>')
+        HTML('<center><img src="images/logoSurv.png" width=200 height=200></center>')
 
        ),
+
+       conditionalPanel(condition="input.tabs1=='Authors'",
+
+
+            HTML('<center><img src="images/team.png" width=200 height=200></center>')
+
+        ),    
+
+        conditionalPanel(condition="input.tabs1=='Help'",
+
+
+            HTML('<img src="images/help.png" width=300 height=200>')
+
+        ),  
 
          ################################# About (end) #####################################
 
@@ -23,7 +37,7 @@ library("shinyBS")
       conditionalPanel(condition="input.tabs1=='Data Upload'",
 
           h4("Input data"),
-          radioButtons("dataInput", "", list("Upload a file" = 2, "Load example data" = 1), selected=1),
+          radioButtons("dataInput", "", list("Upload a file" = 2, "Load example data" = 1), selected=2),
 
           conditionalPanel(condition="input.dataInput=='1'",
             h5("Load example data:"),
@@ -49,7 +63,7 @@ library("shinyBS")
       conditionalPanel(condition="input.tabs1=='Analysis'",
 
 
-          selectizeInput(inputId = "selectAnalysis", label = "Select a Method", choices = c("Life Table" = 1, "Kaplan-Meier" = 2, "Cox Regression" = 3), selected = 3),
+          selectizeInput(inputId = "selectAnalysis", label = "Select a Method", choices = c("Life Table" = 1, "Kaplan-Meier" = 2, "Cox Regression" = 3), selected = 1),
 
           conditionalPanel(condition="input.selectAnalysis=='1'",
 
@@ -78,7 +92,7 @@ library("shinyBS")
 
                 checkboxInput(inputId = "advancedOptions", label = "Advanced Options", value = FALSE),
                   
-                  column(12, tags$style(type="text/css", '#leftPanel { width:250px; padding:-10px; float:left;}'),
+                  #column(12, tags$style(type="text/css", '#leftPanel { width:250px; padding:-10px; float:left;}'),
 
                     conditionalPanel(condition = "input.advancedOptions",
 
@@ -93,12 +107,12 @@ library("shinyBS")
                       radioButtons("refCategory", "Reference category", choices = list("First" = "first", "Last" = "last"))
 
                      )
-                  )
+                  #)
                ),
 
             checkboxInput(inputId = "outputs", label = tags$b("Outputs"), value = FALSE),
 
-              column(12, tags$style(type="text/css", '#leftPanel { width:250px; padding:-10px; float:left;}'),
+              #column(12, tags$style(type="text/css", '#leftPanel { width:250px; padding:-10px; float:left;}'),
 
                 conditionalPanel(condition = "input.outputs",
 
@@ -108,8 +122,8 @@ library("shinyBS")
                   checkboxInput(inputId = "hr", label = "Hazard ratio", value = TRUE),
                   checkboxInput(inputId = "compTest", label = "Comparison test", value = TRUE)
 
-                  )
-                ),
+                  ),
+                #),
 
             actionButton(inputId = "run", label = "Run", icon = icon("play", lib = "glyphicon"))
 
@@ -134,7 +148,7 @@ library("shinyBS")
                 ),
 
               checkboxInput(inputId = "advancedOptionsKM", label = "Advanced Options", value = FALSE),
-                column(12, tags$style(type="text/css", '#leftPanel { width:250px; padding:-10px; float:left;}'),
+                #column(12, tags$style(type="text/css", '#leftPanel { width:250px; padding:-10px; float:left;}'),
 
                 conditionalPanel(condition = "input.advancedOptionsKM",
 
@@ -150,7 +164,7 @@ library("shinyBS")
 
 
                   )
-                )
+                #)
 
               ),
 
@@ -266,7 +280,7 @@ library("shinyBS")
             checkboxInput(inputId = "outputsCox", label = tags$b("Outputs"), value = FALSE),
                 
               conditionalPanel(condition = "input.outputsCox",
-                    column(12, tags$style(type="text/css", '#leftPanel { width:250px; padding:-10px; float:left;}'),
+                 #   column(12, tags$style(type="text/css", '#leftPanel { width:250px; padding:-10px; float:left;}'),
 
                     #checkboxInput(inputId = "displayDescriptives", label = "Descriptives", value = TRUE),
                     checkboxInput(inputId = "displayCoefficientEstimates", label = "Coefficient estimates", value = TRUE),
@@ -279,7 +293,8 @@ library("shinyBS")
                     checkboxInput(inputId = "martingaleResiduals", label = "Martingale residuals", value = FALSE),
                     checkboxInput(inputId = "schoenfeldResiduals", label = "Schoenfeld residuals", value = FALSE),
                     checkboxInput(inputId = "dfBetas", label = "DfBetas", value = FALSE)
-                )),
+                #)
+),
 
             actionButton(inputId = "runCox", label = "Run", icon = icon("play", lib = "glyphicon"))
         
@@ -303,7 +318,7 @@ library("shinyBS")
 
          tabPanel("About",
 
-           br(),
+           #br(),
            h4(tags$b('What is survival analysis?')),
 
              HTML('<p align="justify"> Survival analysis is described as collection of statistical methods for which the response variable of interest
@@ -328,13 +343,16 @@ library("shinyBS")
                 including Log-rank, Gehan-Breslow, Tarone-Ware, Peto-Peto, Modified Peto-Peto, Flemington-Harrington, and interactive plots such as Kaplan-Meier curves and hazard plots.</p>'),
  
               HTML('<p align="justify"> <b> Cox regression:</b> coefficient estimates, hazard ratios, goodness of fit test, analysis of deviance, save predictions, save residuals,
-                save Martingale residuals, save Schoenfeld residuals, save dfBetas, proprtiona hazard assumption test, and interactive plots including Schoenfeld residual plot and Log-Minus-Log plot.</p>'),
+                save Martingale residuals, save Schoenfeld residuals, save dfBetas, proportional hazard assumption test, and interactive plots including Schoenfeld residual plot and Log-Minus-Log plot.</p>'),
 
 
               HTML('<p align="justify"> All source codes are in <a href="https://github.com/selcukorkmaz/compSurv" target="_blank"><b>GitHub</b></a>. Please see the help page for more detailed information.</p>'),
 
-              HTML('<p><div align = "center"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/kmPlot.jpg" width="300" height="200" ></td><td><img src="images/schoenfeldPlot.jpg" width="300" height="200"></td><td><img src="images/lmlPlot.jpg" width="300" height="200"></td></tr></table></div></p>')
+              HTML('<p><div align = "center"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/kmPlot.jpg" width="300" height="200" ></td><td><img src="images/schoenfeldPlot.jpg" width="300" height="200"></td><td><img src="images/lmlPlot.jpg" width="300" height="200"></td></tr></table></div></p>'),
 
+              HTML('<p><b>License:</b> This web-tool as a whole is distributed under GPL-3 (General Public License Version 3).</p>'),
+
+              HTML('<p><b>Disclaimer:</b> This server is intended for research purposes only, not for clinical or commercial use. It is a non-profit service to the scientific community, provided on an "AS-IS " basis without any warranty, expressed or implied. The authors can not be held liable in any way for the service provided here.</p>')
 
              #HTML('<center><img src="images/images.jpg" width=800 height=250></center>')
 
@@ -687,14 +705,129 @@ library("shinyBS")
 
          tabPanel("Help",
 
-           h5('Will be here soon!')
+           h4(tags$b('Usage of the tool:')),
+           h5(tags$b('1. Data upload')),
+           HTML('<p> Load your data set in *.txt file format using this tab.</p>'),
+
+          HTML('<p>  
+                  <ul>
+                    <li>Rows must represent the observations and each column must represent the variables.</li>
+                    <li>First row must be a header which indicates the variable names.</li>
+                    </ul></p>'),
+
+          HTML('<p><div align = "justify"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/dataUpload.jpg" width="400" height="300" border = "1000" alt="" ></td><td><img src="images/dataUpload2.jpg" width="550" height="300" border = "1000" alt=""></td></tr></table></div></p>'),
+
+          br(),
+           h5(tags$b('2. Analysis')),
+            h5(tags$b('2.1. Life Table')),
+            HTML('<p>In order to perform Life Table analysis,</p>'),
+
+            HTML('<p>  
+                  <ol>
+                    <li>Select the analysis method as <b>Life Table</b>.</li>
+                    <li>Select suitable variables for the analysis, such as <b>survival time, status variable, category value for status variable and factor variable, if exists.</b></li>
+                    <li>Define an appropriate <b>time interval</b> from beginning to end of study by a specific step.</li>
+                    <li>In advanced options, one can change <b>confidence interval type</b>, as log, log-log or plain, <b>variance estimation method</b>, as Greenwood or Tsiatis, <b>comparison test type</b>, as Log-rank, Gehan-Breslow, Tarone-Ware, Peto-Peto, Modifi Peto-Peto or Flemington-Harrington, <b>confidence level</b> and <b>reference category</b>, as first or last.</li>
+                    <li>Desired outputs can be selected by clicking <b>Outputs</b> checkbox. Available outputs are <b>case summary, life table, median life time, hazard ratio and comparison test</b>.</li>
+                    <li>Click <b>Run</b> button to run the analysis.</li>
+
+                  </ol></p>'),
+
+
+            HTML('<p><div align = "justify"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/lifeTable.jpg" width="400" height="300" border = "1000" alt="" ></td><td><img src="images/lifeTable2.jpg" width="550" height="300" border = "1000" alt=""></td></tr></table></div></p>'),
+          
+          h5(tags$b('A short tutorial for life table analysis.')),
+            HTML('<p>
+               <video class="centre" width="620" height="440" controls>
+                  <source src="images/lifeTable.mp4" type="video/mp4">
+                  Your browser does not support the video tag.
+                </video> 
+                </p>'),
+
+          br(),
+            h5(tags$b('2.2. Kaplan-Meier')),
+
+               HTML('<p>  
+                  <ol>
+                    <li>Select the analysis method as <b>Kaplan-Meier</b>.</li>
+                    <li>Select suitable variables for the analysis, such as <b>survival time, status variable, category value for status variable and factor variable, if exists.</b></li>
+                    <li>In advanced options, one can change <b>confidence interval type</b>, as log, log-log or plain, <b>variance estimation method</b>, as Greenwood or Tsiatis, <b>comparison test type</b>, as Log-rank, Gehan-Breslow, Tarone-Ware, Peto-Peto, Modifi Peto-Peto or Flemington-Harrington, <b>confidence level</b> and <b>reference category</b>, as first or last.</li>
+                    <li>Desired outputs can be selected by clicking <b>Outputs</b> checkbox. Available outputs are <b>case summary, survival table, mean and median life time, hazard ratio and comparison test</b>.</li>
+                    <li>Click <b>Run</b> button to run the analysis.</li>
+                  </ol></p>'),
+
+            HTML('<p><div align = "justify"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/km.jpg" width="500" height="300" border = "1000" alt="" ></td><td><img src="images/kmPlots2.jpg" width="450" height="300" border = "1000" alt=""></td></tr></table></div></p>'),
+            
+            HTML('<p>  
+                  <ul>
+                    <li>Two interactive plots can be created under <b>Plot</b> subtab: <b>Kaplan-Meier plot and Hazard plot</b> </li>
+                    <li>A number of options available for plot editing.</li>
+                  </ul></p>'),
+
+
+            HTML('<p><div align = "justify"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/kmPlots.jpg" width="500" height="300" border = "1000" alt="" ></td><td><img src="images/kmPlots3.jpg" width="450" height="300" border = "1000" alt=""></td></tr></table></div></p>'),
+
+            h5(tags$b('A short tutorial for Kaplan-Meier analysis.')),
+            HTML('<p>
+               <video class="centre" width="620" height="440" controls>
+                  <source src="images/kaplanMeier.mp4" type="video/mp4">
+                  Your browser does not support the video tag.
+                </video> 
+                </p>'),
+
+         
+          br(),
+            h5(tags$b('2.3. Cox Regression')),
+
+                HTML('<p>  
+                  <ol>
+                    <li>Select the analysis method as <b>Cox Regression</b>.</li>
+                    <li>Select suitable variables for the analysis, such as <b>survival time, status variable, category value for status variable, and categorical and continuous predictors for the model.</b></li>
+                    <li>In advanced options, interaction terms, strata terms and time dependent covariates can be added to the model. Furthermore, once can choose model selection criteria, as AIC or p-value, model selection method, as backward, forward or stepwise, reference category, as first or last, and ties method, as Efron, Breslow or exact.</li>
+                    <li>Desired outputs can be selected by clicking <b>Outputs</b> checkbox. Available outputs are <b>coefficient estimates, hazard ratio, goodness of fit tests, analysis of deviance, predictions, residuals, Martingale residuals, Schoenfeld residuals and DfBetas</b>.</li>
+                    <li>Click <b>Run</b> button to run the analysis.</li>
+                  </ol></p>'), 
+
+            HTML('<p><div align = "justify"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/coxReg.jpg" width="500" height="300" border = "1000" alt="" ></td><td><img src="images/coxReg2.jpg" width="450" height="300" border = "1000" alt=""></td></tr></table></div></p>'),
+                HTML('<p>  
+                  <ul>
+                    <li>In order to test proportional hazard assumption: </li>
+
+                    </ul></p>'),
+              HTML('<p>  
+                  <ol>
+                    <li>A global test can be run</li>
+                    <li>interactive plots, such as Schoenfeld residual plot and Log-Minus-Log plot can be created.</li>
+
+                  </ol></p>'),
+
+            HTML('<p><div align = "justify"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/coxReg3.jpg" width="450" height="300" border = "1000" alt="" ></td><td><img src="images/coxReg4.jpg" width="500" height="300" border = "1000" alt=""></td></tr></table></div></p>'),
+
+
+            h5(tags$b('A short tutorial for Cox regression analysis.')),
+            HTML('<p>
+               <video class="centre" width="620" height="440" controls>
+                  <source src="images/coxRegression.mp4" type="video/mp4">
+                  Your browser does not support the video tag.
+                </video> 
+                </p>')
 
          ),
              
          tabPanel("Authors",
-
-           h5('Selcuk Korkmaz')
-          
+#br(),
+                HTML('<p><a href="http://yunus.hacettepe.edu.tr/~selcuk.korkmaz/" target="_blank"> <b>Selcuk Korkmaz</b></a><p>'),
+                HTML('<p>Hacettepe University Faculty of Medicine <a href="http://www.biostatistics.hacettepe.edu.tr" target="_blank"> Department of Biostatistics</a><p>'),
+                HTML('<p><a href="mailto:selcukorkmaz@gmail.com" target="_blank">selcukorkmaz@gmail.com</a><p>'),
+                HTML('<p><a href="http://yunus.hacettepe.edu.tr/~dincer.goksuluk" target="_blank"> <b>Dincer Goksuluk</b></a><p>'),
+                HTML('<p>Hacettepe University Faculty of Medicine <a href="http://www.biostatistics.hacettepe.edu.tr" target="_blank"> Department of Biostatistics</a><p>'),
+                HTML('<p><a href="mailto:dincer.goksuluk@gmail.com" target="_blank">dincer.goksuluk@gmail.com</a><p>'),
+                #HTML('<br>'),
+                #h4("Contributors"),
+                #h5("Gokmen Zararsiz"),
+                HTML('<p><a href="http://gokmenzararsiz.simplesite.com" target="_blank"> <b>Gokmen Zararsiz</b></a><p>'),
+                HTML('<p>Erciyes University Faculty of Medicine <a href="http://www.biostatistics.hacettepe.edu.tr" target="_blank"> Department of Biostatistics</a><p>'),
+                HTML('<p><a href="mailto:gokmenzararsiz@hotmail.com" target="_blank">gokmenzararsiz@hotmail.com</a><p>')          
          )
 
     
