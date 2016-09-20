@@ -14,6 +14,7 @@ source("ggsurv.R")
 source("ggsurv2.R")
 source("plotSchoenfeld.R")
 library("magrittr")
+library("dplyr")
 
 
 
@@ -881,7 +882,7 @@ resultCox <- reactive({
                            referenceCategory = input$refCategoryCox,alphaRemove = input$alphaToRemove, 
                            storePredictions = input$storePredictions, storeResiduals = input$residuals,
                            storeMartingaleResiduals = input$martingaleResiduals, 
-                           storeSchoenfeldResiduals = input$schoenfeldResiduals, storeDfBetas = input$dfBetas, 
+                           storeSchoenfeldResiduals = input$schoenfeldResiduals, storeDfBetas = input$dfBetas, multipleID = input$multipleID,
                            data = dataSet)        #,
  
  }

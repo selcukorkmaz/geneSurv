@@ -3,7 +3,7 @@ coxRegression <- function(survivalTime, categoricalInput, continuousInput, statu
                           selectCustomInteractionTerms = NULL, timeDependetCovariate = FALSE, selectTimeDependentCovariate = NULL, timeDependentVariableTransformation = "none", strata = FALSE, strataVariable = NULL, displayDescriptives = TRUE, displayCoefficientEstimates = TRUE, displayModelFit = TRUE, hazardRatio = TRUE, goodnessOfFitTests = TRUE, analysisOfDeviance = TRUE,
                           ties = "efron", confidenceLevel = 95, alternativeHypothesis = "equalToTestValue", modelSelectionCriteria = "aic",  modelSelection = "enter",
                           alphaEnter = 0.05, alphaRemove = 0.10, referenceCategory = "first", storePredictions = FALSE, storeResiduals = FALSE, storeMartingaleResiduals = FALSE,
-                          storeSchoenfeldResiduals = FALSE, storeDfBetas = FALSE, CoxPH = TRUE,  data = dataSet){
+                          storeSchoenfeldResiduals = FALSE, storeDfBetas = FALSE, CoxPH = TRUE, multipleID = FALSE, data = dataSet){
   
   
   if(!is.null(survivalTime)){
@@ -28,55 +28,33 @@ coxRegression <- function(survivalTime, categoricalInput, continuousInput, statu
   if(!is.null(statusVariable)){
     statusVariable = as.factor(data[, statusVariable])
     
-        
+    
   }
   
   if(!is.null(status)){
     if(is.numeric(status)){status = as.factor(status)}else{status = as.factor(status)}
-
+    
   }
   
   if(!is.null(categoricalInput) && !is.null(continuousInput)){
-    newData = data.frame(id =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime[,1], 
+    newData = data.frame(id2 =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime[,1], 
                          statusVar=statusVariable, categoricalInput, continuousInput)
     newData = newData[complete.cases(newData),]
     
   }else if(!is.null(categoricalInput) && is.null(continuousInput)){
-    newData = data.frame(id =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime[,1], 
+    newData = data.frame(id2 =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime[,1], 
                          statusVar=statusVariable, categoricalInput)
     newData = newData[complete.cases(newData),]
     
   }else if(is.null(categoricalInput) && !is.null(continuousInput)){
-    newData = data.frame(id =seq(1,dim(survivalTime)[1], 1), survivalTime = survivalTime[,1], 
+    newData = data.frame(id2 =seq(1,dim(survivalTime)[1], 1), survivalTime = survivalTime[,1], 
                          statusVar=statusVariable, continuousInput)
     newData = newData[complete.cases(newData),]
     
   }
-
- 
-  if(timeDependetCovariate && !is.null(selectTimeDependentCovariate)){
   
-    timeDependentCovariateNames = list()
-    newData = cbind.data.frame(newData, data[colnames(data)[!(colnames(data) %in% colnames(newData))]])
-
-   for(i in 1:length(selectTimeDependentCovariate)){
-     
-     if(timeDependentVariableTransformation == "log"){
-
-        newData = cbind.data.frame(newData, tmpNames = newData[,selectTimeDependentCovariate[i]]*log(newData[, "survivalTime"]))
-     
-     }else{
-
-        newData = cbind.data.frame(newData, tmpNames = newData[,selectTimeDependentCovariate[i]]*newData[, "survivalTime"])
-
-     }
-
-      names(newData)[dim(newData)[2]] = timeDependentCovariateNames[[i]] = paste0("time_", selectTimeDependentCovariate[i])
-      
-    }
-    
-    timeDependentNames = unlist(timeDependentCovariateNames)
-  }
+  
+  
   
   if(referenceCategory != "first"){
     for(l in 1:dim(categoricalInput)[2]){
@@ -84,69 +62,118 @@ coxRegression <- function(survivalTime, categoricalInput, continuousInput, statu
     }
   }
   
-
+  
   if(addInteractions){
-   
-      if(!is.null(categoricalInput) || !is.null(continuousInput)){
-        
-        fNames <- names(c(categoricalInput, continuousInput))
-        
-      }  
-        
-        if(twoWayinteractions && length(fNames) >1){
-          
-          twoWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 2)), paste, collapse = ":"))
-          names(twoWayInteractionTerms) <- NULL
-          
-        }else{twoWayInteractionTerms = NULL}
+    
+    if(!is.null(categoricalInput) || !is.null(continuousInput)){
       
-        if(threeWayinteractions && length(fNames) >2){
+      fNames <- names(c(categoricalInput, continuousInput))
       
-          threeWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 3)), paste, collapse = ":"))
-          names(threeWayInteractionTerms) <- NULL
-          
-        }else{threeWayInteractionTerms = NULL}  
-        
-        #if(customInteractions && length(fNames) >2){
-         
-         #   ctwoWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 2)), paste, collapse = ":"))
-         #   names(twoWayInteractionTerms) <- NULL
-            
-         #   cthreeWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 3)), paste, collapse = ":"))
-          #  names(threeWayInteractionTerms) <- NULL
-            
-            
-          #  customInteractionTerms = c(ctwoWayInteractionTerms, cthreeWayInteractionTerms)
-           # names(customInteractionTerms) = NULL
-
-
-        
-        #}else{customInteractionTerms = NULL}
-        
-        if(customInteractions){
-          
-            interactions = selectCustomInteractionTerms
-
-        }else{
-
-            interactions = c(twoWayInteractionTerms, threeWayInteractionTerms)
-
-          } 
-
+    }  
+    
+    if(twoWayinteractions && length(fNames) >1){
+      
+      twoWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 2)), paste, collapse = ":"))
+      names(twoWayInteractionTerms) <- NULL
+      
+    }else{twoWayInteractionTerms = NULL}
+    
+    if(threeWayinteractions && length(fNames) >2){
+      
+      threeWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 3)), paste, collapse = ":"))
+      names(threeWayInteractionTerms) <- NULL
+      
+    }else{threeWayInteractionTerms = NULL}  
+    
+    #if(customInteractions && length(fNames) >2){
+    
+    #   ctwoWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 2)), paste, collapse = ":"))
+    #   names(twoWayInteractionTerms) <- NULL
+    
+    #   cthreeWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 3)), paste, collapse = ":"))
+    #  names(threeWayInteractionTerms) <- NULL
+    
+    
+    #  customInteractionTerms = c(ctwoWayInteractionTerms, cthreeWayInteractionTerms)
+    # names(customInteractionTerms) = NULL
+    
+    
+    
+    #}else{customInteractionTerms = NULL}
+    
+    if(customInteractions){
+      
+      interactions = selectCustomInteractionTerms
+      
+    }else{
+      
+      interactions = c(twoWayInteractionTerms, threeWayInteractionTerms)
+      
+    } 
+    
   }else{
     interactions = NULL
     customInteractionTerms= NULL
   }
   
-
-    if(strata){
-    
-        strataVar = strataVariable
-        newData = cbind.data.frame(newData, data[, strataVar])
-        names(newData)[dim(newData)[2]] = strataVar
   
+  if(strata){
+    
+    strataVar = strataVariable
+    newData = cbind.data.frame(newData, data[, strataVar])
+    names(newData)[dim(newData)[2]] = strataVar
+    
+  }
+  
+    
+  newData = cbind.data.frame(newData, data[colnames(data)[!(colnames(data) %in% colnames(newData))]])
+  
+  if(multipleID != TRUE){  
+       newData$statusVar = newData$statusVar%in%status
+       
+       newData$id <- 1:nrow(newData)
+       cut.points <- unique(newData$survivalTime[newData$statusVar == TRUE])
+       newData <- survSplit(formula = Surv(survivalTime, statusVar)~., data = newData, cut = cut.points, end = "stop",
+                            start = "start", event = "statusVar")
+   }
+  newData$statusVar = as.factor(newData$statusVar)%in%status
+  
+  if(timeDependetCovariate && !is.null(selectTimeDependentCovariate)){
+   
+    timeDependentCovariateNames = list()
+    for(i in 1:length(selectTimeDependentCovariate)){
+      
+      if(timeDependentVariableTransformation == "log"){
+        
+        newData = cbind.data.frame(newData, tmpNames = newData[,selectTimeDependentCovariate[i]]*log(newData[, "survivalTime"]))
+        
+      }else{
+        
+        newData = cbind.data.frame(newData, tmpNames = as.numeric(newData[,selectTimeDependentCovariate[i]])*newData[, "survivalTime"])
+        
+      }
+      
+      names(newData)[dim(newData)[2]] = timeDependentCovariateNames[[i]] = paste0("time_", selectTimeDependentCovariate[i])
+      
     }
-
+    
+    timeDependentNames = unlist(timeDependentCovariateNames)    
+    
+  }
+  
+  if(multipleID){  
+      names(newData)[which(names(newData) == "start")] = "start2"
+      
+      newData <- newData %>%
+        group_by(id) %>%
+        mutate(start = 0:(n() - 1))
+      
+      newData = as.data.frame(newData)
+      
+      ind = row.names(newData[newData$start !=0,])
+      
+      newData$start[as.numeric(ind)] =  newData$survivalTime[as.numeric(ind)-1]
+  }
   
   if(!is.null(categoricalInput) || !is.null(continuousInput)){
     
@@ -164,39 +191,37 @@ coxRegression <- function(survivalTime, categoricalInput, continuousInput, statu
         predictors2 = paste(predictors, interactions, sep = "+")
       }
       predictors = predictors2
-     }
-
+    }
+    
     if(timeDependetCovariate && !is.null(selectTimeDependentCovariate)){
-     
+      
       
       if(length(timeDependentNames) > 1){
-      timeDependents = paste(timeDependentNames, collapse = "+")
+        timeDependents = paste(timeDependentNames, collapse = "+")
       }else{
         
         timeDependents =  timeDependentNames
       }
       predictors = paste(predictors, timeDependents, sep = "+", collapse = "+")
     }
-
+    
     if(strata && !is.null(strataVariable)){
       
       strataVars = paste0("strata(",strataVar,")")
       predictors = paste(predictors, strataVars, sep = "+", collapse = "+")
       
     } 
-   
+    
   }else{predictors = 1}
   
-newData$statusVar = newData$statusVar%in%status
-
   if(modelSelection == "enter"){
-    formula = as.formula(paste0("Surv(survivalTime, statusVar ==  TRUE) ~ ", predictors))
+    formula = as.formula(paste0("Surv(start, survivalTime, statusVar ==  TRUE) ~ ", predictors))
     current = coxph(formula, data=newData, ties = ties)
   }
   
   if(modelSelection == "forward"){
-    formula = as.formula(paste0("Surv(survivalTime, statusVar ==  TRUE) ~ ", 1))
-    fullFormula = as.formula(paste0("Surv(survivalTime, statusVar ==  TRUE) ~ ", predictors))
+    formula = as.formula(paste0("Surv(start, survivalTime, statusVar ==  TRUE) ~ ", 1))
+    fullFormula = as.formula(paste0("Surv(start, survivalTime, statusVar ==  TRUE) ~ ", predictors))
     scope = paste0("~ ", predictors)
     current = coxph(formula = formula, data=newData, ties = ties)
     full = coxph(formula = fullFormula, data=newData, ties = ties)
@@ -237,7 +262,7 @@ newData$statusVar = newData$statusVar%in%status
   }
   
   if(modelSelection == "backward"){
-    formula = as.formula(paste0("Surv(survivalTime, statusVar ==  TRUE) ~ ", predictors))
+    formula = as.formula(paste0("Surv(start, survivalTime, statusVar ==  TRUE) ~ ", predictors))
     current = coxph(formula, data=newData, ties = ties)
     coeffs = length(current$coefficients)
     if(modelSelectionCriteria == "aic"){
@@ -270,7 +295,7 @@ newData$statusVar = newData$statusVar%in%status
   }
   
   if(modelSelection == "stepwise"){
-    formulaFull = as.formula(paste0("Surv(survivalTime, statusVar ==  TRUE) ~ ", predictors))
+    formulaFull = as.formula(paste0("Surv(start, survivalTime, statusVar ==  TRUE) ~ ", predictors))
     current = coxph(formula = formulaFull, data=newData, ties = ties)
     formula = paste0("Surv(survivalTime, statusVar == TRUE) ~ ", 1)
     coeffs = length(current$coefficients)

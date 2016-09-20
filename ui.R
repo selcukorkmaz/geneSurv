@@ -195,6 +195,7 @@ library("shinyBS")
             
               conditionalPanel(condition = "input.inputsCox",
             
+
                   selectizeInput("survivalTimeCox", "Survival time", choices = NULL, multiple = FALSE),
               
                   selectizeInput("statusVariableCox", "Select status variable", choices = NULL, multiple = FALSE),
@@ -211,7 +212,9 @@ library("shinyBS")
               
                   checkboxInput(inputId = "advancedOptionsCox", label = "Advanced Options", value = FALSE),
 
+
                         conditionalPanel(condition = "input.advancedOptionsCox",
+                        checkboxInput(inputId = "multipleID", label = "Multiple ID", value = FALSE),
 
                           checkboxInput(inputId = "addInteractions", label = "Add interactions", value = FALSE),
 
