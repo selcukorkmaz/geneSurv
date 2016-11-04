@@ -24,8 +24,17 @@ library("shinyBS")
 
         conditionalPanel(condition="input.tabs1=='Help'",
 
+           # HTML('<img src="images/help.png" width=300 height=200>'),
 
-            HTML('<img src="images/help.png" width=300 height=200>')
+              conditionalPanel(condition = "input.tabs1 == 'Help'",
+                h4(tags$b("Help")), 
+                a("Usage of the tool", href = "#usage"), br(),
+                a("1. Data upload", href = "#upload"), br(),
+                a("2. Analysis", href = "#analysis"), br(),
+                a("2.1. Life Table", href = "#lt"), br(),
+                a("2.2. Kaplan-Meier", href = "#km"), br(),
+                a("2.3. Cox Regression", href = "#cox")
+              )
 
         ),  
 
@@ -37,11 +46,11 @@ library("shinyBS")
       conditionalPanel(condition="input.tabs1=='Data Upload'",
 
           h4("Input data"),
-          radioButtons("dataInput", "", list("Upload a file" = 2, "Load example data" = 1), selected=2),
+          radioButtons("dataInput", "", list("Upload a file" = 2, "Load example data" = 1), selected=1),
 
           conditionalPanel(condition="input.dataInput=='1'",
             h5("Load example data:"),
-            radioButtons("sampleData", "", list("Example data (Life Table and Kaplan-Meier)"=1, "Example data2 (Cox Regression)"=2), selected=2)
+            radioButtons("sampleData", "", list("Example data (Life Table and Kaplan-Meier)"=1, "Example data2 (Cox Regression)"=2), selected=1)
            ),
 
           conditionalPanel(condition="input.dataInput=='2'",
@@ -63,10 +72,11 @@ library("shinyBS")
       conditionalPanel(condition="input.tabs1=='Analysis'",
 
 
-          selectizeInput(inputId = "selectAnalysis", label = "Select a Method", choices = c("Life Table" = 1, "Kaplan-Meier" = 2, "Cox Regression" = 3), selected = 1),
+          selectizeInput(inputId = "selectAnalysis", label = "Select a Method", choices = c("Life Table" = 1, "Kaplan-Meier" = 2, "Cox Regression" = 3, "Cox Regression with Lasso" = 4, "Random Survival Forests" = 5), selected = 2),
+
+
 
           conditionalPanel(condition="input.selectAnalysis=='1'",
-
             checkboxInput(inputId = "inputs", label = tags$b("Inputs"), value = TRUE),
               conditionalPanel(condition = "input.inputs",
 
@@ -115,6 +125,10 @@ library("shinyBS")
               #column(12, tags$style(type="text/css", '#leftPanel { width:250px; padding:-10px; float:left;}'),
 
                 conditionalPanel(condition = "input.outputs",
+
+
+#HTML('<p>  <script src="https://code.highcharts.com/highcharts.js"></script><div id="result"></div><table id="table-sparkline"> <thead><tr><th>State</th><th>Income</th><th>Income per quarter</th><th>Costs</th><th>Costs per quarter</th><th>Result</th><th>Result per quarter</th></tr></thead><tbody id="tbody-sparkline"><tr><th>Alabama</th><td>254</td><td data-sparkline="71, 78, 39, 66 "/><td>296</td><td data-sparkline="68, 52, 80, 96 "/><td>-42</td><td data-sparkline="3, 26, -41, -30 ; column"/></tr></tbody></table></p>'),     
+
 
                   checkboxInput(inputId = "caseSummary", label = "Case summary", value = TRUE),
                   checkboxInput(inputId = "lifeTable", label = "Life table", value = TRUE),
@@ -297,11 +311,125 @@ library("shinyBS")
                     checkboxInput(inputId = "schoenfeldResiduals", label = "Schoenfeld residuals", value = FALSE),
                     checkboxInput(inputId = "dfBetas", label = "DfBetas", value = FALSE)
                 #)
-),
+            ),
 
             actionButton(inputId = "runCox", label = "Run", icon = icon("play", lib = "glyphicon"))
         
-           )
+           ),
+
+      conditionalPanel(condition="input.selectAnalysis=='5'",
+                 
+                 checkboxInput(inputId = "inputsRF", label = tags$b("Inputs"), value = TRUE),
+                 
+                 conditionalPanel(condition = "input.inputsRF",
+                                  
+                                  
+                                  selectizeInput("survivalTimeRF", "Survival time", choices = NULL, multiple = FALSE),
+                                  
+                                  selectizeInput("statusVariableRF", "Select status variable", choices = NULL, multiple = FALSE),
+                                  
+                                  selectizeInput("statusRF", "Select category for status variable", choices = NULL, multiple = FALSE),
+                                  
+                                  selectizeInput("categoricalInputRF", "Categorical variable(s)", choices = NULL, multiple = TRUE),
+                                  
+                                  selectizeInput("continuousInputRF", "Continuous variable(s)", choices = NULL, multiple = TRUE),
+                                  
+                                  
+                                  
+                                  
+                                  
+                                  checkboxInput(inputId = "advancedOptionsRF", label = "Advanced Options", value = FALSE),
+                                  
+                                  
+                                  conditionalPanel(condition = "input.advancedOptionsRF",
+                                                   checkboxInput(inputId = "multipleIDRF", label = "Multiple ID", value = FALSE),
+                                                   
+                                                   checkboxInput(inputId = "addInteractionsRF", label = "Add interactions", value = FALSE),
+                                                   
+                                                   
+                                                   conditionalPanel(condition = "input.addInteractionsRF",
+                                                                    
+                                                                    
+                                                                    checkboxInput(inputId = "twoWayInteractionsRF", label = "All 2-way interactions", value = FALSE),
+                                                                    checkboxInput(inputId = "threeWayInteractionsRF", label = "All 3-way interactions", value = FALSE),
+                                                                    checkboxInput(inputId = "customInteractionsRF", label = "Custom interactions", value = FALSE),
+                                                                    
+                                                                    conditionalPanel(condition = "input.customInteractionsRF",
+                                                                                     
+                                                                                     selectizeInput(inputId = "selectCustomInteractionsRF", label = "Select interactions", choices = NULL, multiple = TRUE)
+                                                                                     
+                                                                    )
+                                                                    
+                                                                    
+                                                   ),
+                                                   
+                                                   checkboxInput(inputId = "addTimeDependentCovariatesRF", label = "Add time dependendent covariates", value = FALSE),
+                                                   
+                                                   conditionalPanel(condition = "input.addTimeDependentCovariatesRF",
+                                                                    
+                                                                    radioButtons("timeDepTransformRF", "Transformation", choices = list("None" = "none", "Log" = "log"), selected = "none"),
+                                                                    
+                                                                    selectizeInput(inputId = "selectTimeDependentVariablesRF", label = "Select covariates", choices = NULL, multiple = TRUE)
+                                                                    
+                                                                    
+                                                   ),
+                                                   
+                                                   
+                                                   checkboxInput(inputId = "addStrataRF", label = "Add strata", value = FALSE),
+                                                   
+                                                   conditionalPanel(condition = "input.addStrataRF",
+                                                                    
+                                                                    selectizeInput(inputId = "selectStrataVariableRF", label = "Select strata variable", choices = NULL, multiple = FALSE)
+                                                                    
+                                                                    
+                                                   ),
+                                                   
+                                                   checkboxInput(inputId = "moreOptionsRF", label = "More options", value = FALSE),
+                                                   
+                                                   conditionalPanel(condition = "input.moreOptionsRF",
+                                                                    
+                                                                    radioButtons("modelSelectionCriteriaRF", "Model selection criteria", choices = list("AIC" = "aic", "p value" = "pValue"), selected = "aic"),
+                                                                    
+                                                                    conditionalPanel(condition = "input.modelSelectionCriteriaRF == 'pValue'",
+                                                                                     
+                                                                                     numericInput("alphaToEnterRF", "Alpha to enter", value = 0.05, min = 0, max = 1, step = 0.05),
+                                                                                     
+                                                                                     numericInput("alphaToRemoveRF", "Alpha to remove", value = 0.10, min = 0, max = 1, step = 0.05)
+                                                                                     
+                                                                    ),
+                                                                    
+                                                                    
+                                                                    
+                                                                    selectizeInput("modelSelectionRF", "Model selection", choices = list("Enter" = "enter", "Backward" = "backward", "Forward" = "forward", "Stepwise" = "stepwise"), selected = "enter"),
+                                                                    numericInput("confidenceLevelRF", "Confidence level", value = 95, min = 0, max = 100),
+                                                                    radioButtons("refCategoryRF", "Reference category", choices = list("First" = "first", "Last" = "last")),
+                                                                    selectizeInput("tiesRF", "Ties", choices = list("Efron" = "efron", "Breslow" = "breslow", "Exact" = "exact"), selected = "breslow", multiple = FALSE)
+                                                                    
+                                                   ))
+                 ),
+                 
+                 checkboxInput(inputId = "outputsRF", label = tags$b("Outputs"), value = FALSE),
+                 
+                 conditionalPanel(condition = "input.outputsRF",
+                                  #   column(12, tags$style(type="text/css", '#leftPanel { width:250px; padding:-10px; float:left;}'),
+                                  
+                                  #checkboxInput(inputId = "displayDescriptives", label = "Descriptives", value = TRUE),
+                                  checkboxInput(inputId = "displayCoefficientEstimatesRF", label = "Coefficient estimates", value = TRUE),
+                                  #checkboxInput(inputId = "displayModelFit", label = "Model fit", value = TRUE),
+                                  checkboxInput(inputId = "hrRF", label = "Hazard ratio", value = TRUE),
+                                  checkboxInput(inputId = "goodnessOfFitTestsRF", label = "Goodness of fit tests", value = TRUE),
+                                  checkboxInput(inputId = "analysisOfDevianceRF", label = "Analysis of deviance", value = FALSE),
+                                  checkboxInput(inputId = "storePredictionsRF", label = "Predictions", value = FALSE),
+                                  checkboxInput(inputId = "residualsRF", label = "Residuals", value = FALSE),
+                                  checkboxInput(inputId = "martingaleResidualsRF", label = "Martingale residuals", value = FALSE),
+                                  checkboxInput(inputId = "schoenfeldResidualsRF", label = "Schoenfeld residuals", value = FALSE),
+                                  checkboxInput(inputId = "dfBetasRF", label = "DfBetas", value = FALSE)
+                                  #)
+                 ),
+                 
+                 actionButton(inputId = "runRF", label = "Run", icon = icon("play", lib = "glyphicon"))
+                 
+          )
 
        )
              
@@ -395,6 +523,49 @@ library("shinyBS")
                       DT::dataTableOutput('comparisonTestResults')
 
              )
+
+            #tabPanel('Plot',
+         
+                 #br(),
+                 
+                 #fluidRow(
+                 #  column(4,actionButton(inputId = "createLTPlot", label = "Create Plot", icon = icon("signal", lib = "glyphicon")))
+                 #),
+                # 
+                # plotly::plotlyOutput('LTCurvePlot'),
+                # 
+                # conditionalPanel(condition = "input.createLTPlot" ,
+                #                  
+                #                  checkboxInput(inputId = "LTPlotOptions", label = "Edit Plot", value = FALSE)
+                #                  
+                # ),
+                # # LT Options
+                # conditionalPanel(condition = "input.LTPlotOptions" ,
+                #                
+                #                  
+                #                  fluidRow(
+                #                    column(4,textInput("mainPanelLT", "Main Title", value = "Life Table Survival Plot")),
+                #                    column(4,textInput("xlabLT", "X-axis Label", value = "Time")),
+                #                    column(4,textInput("ylabLT", "Y-axis Label", value = "Survival Probability"))
+                #                  ),
+                #                
+                #                selectizeInput("ltyLT", "LT curve line type",
+                #                                            choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "1",
+                #                                                        "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "2",
+                #                                                        "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "3",
+                #                                                        "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "4",
+                #                                                        "\U2500 \U2500 \U2500 \U2500 \U2500" = "5",
+                #                                                        "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "6"),
+                #                                            selected = "1")
+                                  
+          #) # End for LT Options
+         
+         # Hazard Plot Options
+                  # End for Hazard plot options
+
+          #) # End for Plot
+
+                  #)  # End for Tabset Panel  
             )
           ), # End for Condition 1
 
@@ -409,13 +580,38 @@ library("shinyBS")
                     DT::dataTableOutput('descriptivesKM'),
 
                     h4(textOutput(outputId = "survivalTableTextKM")),
+
+                    
                     DT::dataTableOutput('survivaltableResult'),
+                    conditionalPanel(condition = "input.runKM",
+                    conditionalPanel(condition = "input.survivalTable",
+                      checkboxInput(inputId = "createSurvivalPlot", label = "Create Plot", value = FALSE)
+                    )),
+
+                    conditionalPanel(condition = "input.createSurvivalPlot",
+
+                        selectizeInput(inputId = "selectGroup", label = "Select a factor group", choices = NULL, selected = NULL),
+                        highcharter::highchartOutput('survivalPlot')
+                        
+                      ),
 
                     h4(textOutput(outputId = "meanMedianSurvivalTimesText")),
                     DT::dataTableOutput('meanMedianSurvivalTimesResult'),
 
                     h4(textOutput(outputId = "hrTextKM")),
                     DT::dataTableOutput('hazardRatioResultKM'),
+                    conditionalPanel(condition = "input.runKM",
+                    conditionalPanel(condition = "input.hrKM",
+                      checkboxInput(inputId = "createHazardPlot", label = "Create Plot", value = FALSE)
+                    )),
+
+                    conditionalPanel(condition = "input.createHazardPlot",
+
+                        selectizeInput(inputId = "selectGroupHazard", label = "Select a factor group", choices = NULL, selected = NULL),
+                        highcharter::highchartOutput('hazardPlot')
+                        
+                      ),
+
 
                     h4(textOutput(outputId = "compTestTextKM")),
                     DT::dataTableOutput('comparisonTestResultsKM')
@@ -427,11 +623,14 @@ library("shinyBS")
                         br(),
 
                         fluidRow(
-                           column(4,selectizeInput(inputId = "selectPlotKM", label = "Select a plot", choices = c("Kaplan-Meier Curve" = 1, "Hazard Plot" = 2), selected = 1)),
+                           column(4,selectizeInput(inputId = "selectPlotKM", label = "Select a plot", choices = c("Kaplan-Meier Curve" = 1, "Hazard Plot" = 2, "Log-Minus-Log" = 3), selected = 1)),
                            column(4,actionButton(inputId = "createKmPlot", label = "Create Plot", icon = icon("signal", lib = "glyphicon")))
                         ),
 
-                        plotly::plotlyOutput('kmCurvePlot'),
+                        #plotly::plotlyOutput('kmCurvePlot'),
+
+                        highcharter::highchartOutput('kmCurvePlot', width = "100%", height = "525px"),
+
 
                         conditionalPanel(condition = "input.createKmPlot" ,
                       
@@ -440,104 +639,151 @@ library("shinyBS")
                         ),
                            # KM Options
                         conditionalPanel(condition = "input.kmPlotOptions && input.selectPlotKM == 1" ,
-                           fluidRow(
-                              column(4,selectizeInput("ltyKM", "KM curve line type",
-                                choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "1",
-                                 "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "2",
-                                 "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "3",
-                                 "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "4",
-                                 "\U2500 \U2500 \U2500 \U2500 \U2500" = "5",
-                                 "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "6"),
-                                 selected = "1")
-                               ),
 
-                              column(4,selectizeInput(inputId = "addCI", label = "Add Confidence Interval", choices = c("None", "Line", "Ribbon"), selected = "None")),
-
-                              column(4,selectizeInput("ltyKMCI", "CI line type",
-                                  choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "1",
-                                   "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "2",
-                                   "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "3",
-                                   "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "4",
-                                   "\U2500 \U2500 \U2500 \U2500 \U2500" = "5",
-                                   "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "6"),
-                                   selected = "2"))
-                            ),
-
-                            fluidRow(
-                                column(4,shinyjs::colourInput("curveColKM", "Choose line color (*)", value = "black")),
-                                column(4,selectizeInput("censShapeKM", "Select censored case shape",
-                                  choices = c("\U002B" = "3", "\U25EF" = "1", "\U25B3" = "2",  "\U25A2" = "0", "\U2573" = "4", "None" = "None"),
-                                  selected = "3")),
-                                column(4,shinyjs::colourInput("censColKM", "Choose censored cases color", value = "black"))
-                            ),
-
-                            fluidRow(
+                          fluidRow(
                                 column(4,textInput("mainPanelKM", "Main Title", value = "Kaplan Meier Plot")),
                                 column(4,textInput("xlabKM", "X-axis Label", value = "Time")),
                                 column(4,textInput("ylabKM", "Y-axis Label", value = "Survival Probability"))
+                          ),
+
+
+
+
+
+                            fluidRow(
+                                column(4, checkboxInput("addCens", "Add censored cases", value = TRUE)),
+
+                                column(4,selectizeInput("censShapeKM", "Select censored case shape",
+                                  choices = c("\U002B" = "plus", "\U25EF" = "circle", "\U25B3" = "triangle",  "\U25A2" = "square", "\U2573" = "cross"),
+                                  selected = "plus")),
+                                column(4,shinyjs::colourInput("censColKM", "Choose censored cases color", value = "black"))
                             ),
 
 
-                            #fluidRow(
-                            #  column(4,numericInput("xAxisLowerKM", "x-axis lower limit", value = NULL)),
-                            #  column(4,numericInput("xAxisUpperKM", "x-axis upper limit", value = NULL)),
-                            #  column(4,numericInput("byKM", "Increase by", value = NULL))
-                            #),
+                            fluidRow(
+                              column(4,selectizeInput("ltyKM", "KM curve line type",
+                                choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "Solid",
+                                 "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "ShortDash",
+                                 "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "ShortDot",
+                                 "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "ShortDashDot",
+                                 "\U2500 \U2500 \U2500 \U2500 \U2500" = "LongDash",
+                                 "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "LongDashShortDash"),
+                                 selected = "Solid")
+                               ),
 
+                              column(4,checkboxInput(inputId = "addCI", label = "Add Confidence Interval", value = TRUE)),
 
-                           sliderInput("alpha", "Ribbon opacity (**)", min = 0, max = 1, value = 0.5, step= 0.1),
-                           h6("(*) Only for single curve"),
-                           h6("(**) Only when confidence interval is selected as ribbon")
+                              column(4, sliderInput("alpha", "Confidence Interval Opacity", min = 0, max = 1, value = 0.5, step= 0.1))
+                            ),
 
-                          ), # End for KM Options
+                        
+                          
+                          fluidRow(
+                              column(4, shinyjs::colourInput("backgroundKM", "Plot background color", value = "white")),
+
+                              column(4, selectInput("changeTheme", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
+                                "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
+                                "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
+                              selected = "theme0"))
+                        )
+
+                    ), # End for KM Options
                   
+
+
+
                           # Hazard Plot Options
                         conditionalPanel(condition = "input.kmPlotOptions && input.selectPlotKM == 2" ,
-                          fluidRow(
-                            column(4,selectizeInput("ltyHazard", "Hazard curve line type",
-                            choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "1",
-                            "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "2",
-                            "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "3",
-                            "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "4",
-                            "\U2500 \U2500 \U2500 \U2500 \U2500" = "5",
-                            "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "6"),
-                            selected = "1")),
-
-                            column(4,selectizeInput(inputId = "addCIhazard", label = "Add Confidence Interval", choices = c("None", "Line", "Ribbon"), selected = "None")),
-
-                            column(4,selectizeInput("ltyHazardCI", "CI line type",
-                            choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "1",
-                            "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "2",
-                            "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "3",
-                            "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "4",
-                            "\U2500 \U2500 \U2500 \U2500 \U2500" = "5",
-                            "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "6"),
-                            selected = "2"))
+                           fluidRow(
+                                column(4,textInput("mainPanelHazard", "Main Title", value = "Hazard Plot")),
+                                column(4,textInput("xlabHazard", "X-axis Label", value = "Time")),
+                                column(4,textInput("ylabHazard", "Y-axis Label", value = "Cumulative Hazard"))
                           ),
 
+                            fluidRow(
+                                column(4, checkboxInput("addCensHazard", "Add censored cases", value = TRUE)),
+
+                                column(4,selectizeInput("censShapeHazard", "Select censored case shape",
+                                  choices = c("\U002B" = "plus", "\U25EF" = "circle", "\U25B3" = "triangle",  "\U25A2" = "square", "\U2573" = "cross"),
+                                  selected = "plus")),
+                                column(4,shinyjs::colourInput("censColHazard", "Choose censored cases color", value = "black"))
+                            ),
+
+
+                            fluidRow(
+                              column(4,selectizeInput("ltyHazard", "Hazard curve line type",
+                                choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "Solid",
+                                 "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "ShortDash",
+                                 "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "ShortDot",
+                                 "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "ShortDashDot",
+                                 "\U2500 \U2500 \U2500 \U2500 \U2500" = "LongDash",
+                                 "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "LongDashShortDash"),
+                                 selected = "Solid")
+                               ),
+
+                              column(4,checkboxInput(inputId = "addCIHazard", label = "Add Confidence Interval", value = TRUE)),
+
+                              column(4, sliderInput("alphaHazard", "Confidence Interval Opacity", min = 0, max = 1, value = 0.5, step= 0.1))
+                            ),
+
+                        
+                          
                           fluidRow(
-                            column(4,shinyjs::colourInput("curveColHazard", "Choose line color (*)", value = "black")),
-                            column(4,selectizeInput("censShapeHazard", "Select censored case shape",
-                            choices = c("\U002B" = "3", "\U25EF" = "1", "\U25B3" = "2",  "\U25A2" = "0", "\U2573" = "4", "None" = "NA"),
-                            selected = "3")),
+                              column(4, shinyjs::colourInput("backgroundHazard", "Plot background color", value = "white")),
 
-                            column(4,shinyjs::colourInput("censColHazard", "Choose censored cases color", value = "black"))
-                          ),
-
-                          fluidRow(
-                            column(4,textInput("mainPanelHazard", "Main Title", value = "Hazard Plot")),
-                            column(4,textInput("xlabHazard", "X-axis Label", value = "Time")),
-                            column(4,textInput("ylabHazard", "Y-axis Label", value = "Cumulative Hazard Rate"))
-                          ),
-
-                          sliderInput("alphaHazard", "Ribbon opacity (**)", min = 0, max = 1, value = 0.5, step= 0.1),
-
-                          h6("(*) Only for single curve"),
-                          h6("(**) Only when confidence interval is selected as ribbon")
-
-
-                        ) 
+                              column(4, selectInput("changeThemeHazard", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
+                                "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
+                                "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
+                              selected = "theme0"))
+                        )
+                        ), 
                           # End for Hazard plot options
+
+                          # Lml Plot Options
+                conditionalPanel(condition = "input.kmPlotOptions && input.selectPlotKM == 3" ,
+                 fluidRow(
+                   column(4,textInput("mainPanelLml", "Main Title", value = "Log-Minus-Log Plot")),
+                   column(4,textInput("xlabLml", "X-axis Label", value = "Time")),
+                   column(4,textInput("ylabLml", "Y-axis Label", value = "log(-log(survival))"))
+                 ),
+                 
+                 fluidRow(
+                   column(4, checkboxInput("addCensLml", "Add censored cases", value = TRUE)),
+                   
+                   column(4,selectizeInput("censShapeLml", "Select censored case shape",
+                                           choices = c("\U002B" = "plus", "\U25EF" = "circle", "\U25B3" = "triangle",  "\U25A2" = "square", "\U2573" = "cross"),
+                                           selected = "plus")),
+                   column(4,shinyjs::colourInput("censColLml", "Choose censored cases color", value = "black"))
+                 ),
+                 
+                 
+                 fluidRow(
+                   column(4,selectizeInput("ltyLml", "Lml curve line type",
+                                           choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "Solid",
+                                                       "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "ShortDash",
+                                                       "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "ShortDot",
+                                                       "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "ShortDashDot",
+                                                       "\U2500 \U2500 \U2500 \U2500 \U2500" = "LongDash",
+                                                       "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "LongDashShortDash"),
+                                           selected = "Solid")
+                   ),
+                   
+                   column(4,checkboxInput(inputId = "addCILml", label = "Add Confidence Interval", value = TRUE)),
+                   
+                   column(4, sliderInput("alphaLml", "Confidence Interval Opacity", min = 0, max = 1, value = 0.5, step= 0.1))
+                 ),
+                 
+                 
+                 
+                 fluidRow(
+                   column(4, shinyjs::colourInput("backgroundLml", "Plot background color", value = "white")),
+                   
+                   column(4, selectInput("changeThemeLml", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
+                                                                                            "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
+                                                                                            "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
+                                         selected = "theme0"))
+                 )
+                ) #End for LML options
 
                      ) # End for Plot
 
@@ -555,12 +801,31 @@ library("shinyBS")
                tabPanel('Model',
 
                     #verbatimTextOutput("str"),
+                    h4(textOutput(outputId = "displaySummaryCox")),
+                    verbatimTextOutput("summaryCox"),
 
                     h4(textOutput(outputId = "displayCoefficientEstimatesCox")),
                     DT::dataTableOutput('displayCoefficientEstimatesResult'),
 
                     h4(textOutput(outputId = "hazardRatioCox")),
                     DT::dataTableOutput('hazardRatioResultCox'),
+                    conditionalPanel(condition = "input.runCox",
+                      conditionalPanel(condition = "input.hrcox",
+                      checkboxInput(inputId = "createHazardCoxPlot", label = "Create Plot", value = FALSE)
+                      
+                    )),
+
+                    conditionalPanel(condition = "input.createHazardCoxPlot",
+
+                        highcharter::highchartOutput("hazardErrorbar")
+
+                      ),
+
+
+                    #fluidRow(
+                    #  column(5, DT::dataTableOutput('hazardRatioResultCox')),
+                    #  column(7, plotOutput("hazardErrorbar"))
+                    #),
 
                     h4(textOutput(outputId = "goodnessOfFitTestsText")),
                     DT::dataTableOutput('goodnessOfFitTestsRes'),
@@ -604,7 +869,7 @@ library("shinyBS")
                   conditionalPanel(condition = "input.createSchoenfeldPlot" ,
  
                           h4(textOutput(outputId = "phPlotsText")),
-                          plotly::plotlyOutput('phPlots'),
+                          highcharter::highchartOutput('phPlots', width = "100%", height = "525px"),
 
 
                           conditionalPanel(condition = "input.createSchoenfeldPlot" ,
@@ -614,33 +879,49 @@ library("shinyBS")
                         ),
                         # KM Options
                         conditionalPanel(condition = "input.phPlotOptions && input.selectPlotCox == 2" ,
-                           fluidRow(
-                              column(4,selectizeInput("ltyKMph", "Curve line type",
-                                choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "1",
-                                 "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "2",
-                                 "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "3",
-                                 "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "4",
-                                 "\U2500 \U2500 \U2500 \U2500 \U2500" = "5",
-                                 "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "6"),
-                                 selected = "1")),
-
-                             column(4,checkboxInput(inputId = "themeKmCox", label = "White/Grey theme", value = TRUE))
-
-                             
+                           
+                          fluidRow(
+                              column(4,textInput("mainPanelLmlSchoenfeld", "Main Title", value = "Log-Minus-Log Plot")),
+                              column(4,textInput("xlabLmlSchoenfeld", "X-axis Label", value = "Time")),
+                              column(4,textInput("ylabLmlSchoenfeld", "Y-axis Label", value = "log(-log(survival))"))
                             ),
 
-                            fluidRow(
-                                column(4,textInput("mainPanelKMph", "Main Title", value = "Log-Minus-Log Plot")),
-                                column(4,textInput("xlabKMph", "X-axis Label", value = "Time")),
-                                column(4,textInput("ylabKMph", "Y-axis Label", value = "-log(-log(survival))"))
-                            )
-
-
                             #fluidRow(
-                            #  column(4,numericInput("xAxisLowerKM", "x-axis lower limit", value = NULL)),
-                            #  column(4,numericInput("xAxisUpperKM", "x-axis upper limit", value = NULL)),
-                            #  column(4,numericInput("byKM", "Increase by", value = NULL))
+                            #  column(4, checkboxInput("addCensLmlSchoenfeld", "Add censored cases", value = TRUE)),
+                            #  
+                            #  column(4,selectizeInput("censShapeLmlSchoenfeld", "Select censored case shape",
+                            #                          choices = c("\U002B" = "plus", "\U25EF" = "circle", "\U25B3" = "triangle",  "\U25A2" = "square", "\U2573" = "cross"),
+                            #                          selected = "plus")),
+                            #  column(4,shinyjs::colourInput("censColLmlSchoenfeld", "Choose censored cases color", value = "black"))
                             #),
+
+
+                            fluidRow(
+                              column(4,selectizeInput("ltyLmlSchoenfeld", "LmlSchoenfeld curve line type",
+                                                      choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "Solid",
+                                                                  "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "ShortDash",
+                                                                  "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "ShortDot",
+                                                                  "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "ShortDashDot",
+                                                                  "\U2500 \U2500 \U2500 \U2500 \U2500" = "LongDash",
+                                                                  "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "LongDashShortDash"),
+                                                      selected = "Solid")
+                              ),
+                              
+                              column(4,checkboxInput(inputId = "addCILmlSchoenfeld", label = "Add Confidence Interval", value = FALSE)),
+                              
+                              column(4, sliderInput("alphaLmlSchoenfeld", "Confidence Interval Opacity", min = 0, max = 1, value = 0.5, step= 0.1))
+                            ),
+
+
+
+                            fluidRow(
+                              column(4, shinyjs::colourInput("backgroundSchoenfeldLml", "Plot background color", value = "white")),
+                              
+                              column(4, selectInput("changeThemeSchoenfeldLml", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
+                                                                                                    "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
+                                                                                                    "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
+                                                    selected = "theme0"))
+                            )
 
                           ), # End for KM Options
                   
@@ -649,39 +930,29 @@ library("shinyBS")
                             fluidRow(
                               
 
-                              column(4, checkboxInput(inputId = "addCIschoenfeld", label = "Add Confidence Interval", value = TRUE)),
+                              column(4, checkboxInput(inputId = "addCIschoenfeld", label = "Add Confidence Interval", value = FALSE)),
 
                               column(4, checkboxInput(inputId = "addResidual", label = "Add Residuals", value = TRUE)),
 
 
                               column(4,selectizeInput("ltySchoenfeld", "Line type",
-                                  choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "1",
-                                  "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "2",
-                                  "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "3",
-                                  "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "4",
-                                  "\U2500 \U2500 \U2500 \U2500 \U2500" = "5",
-                                  "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "6"),
-                                  selected = "1"))
+                                  choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "Solid",
+                                                       "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "ShortDash",
+                                                       "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "ShortDot",
+                                                       "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "ShortDashDot",
+                                                       "\U2500 \U2500 \U2500 \U2500 \U2500" = "LongDash",
+                                                       "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "LongDashShortDash"),
+                                           selected = "Solid"))
 
                             ),
 
 
 
-                            fluidRow(
-
-                              column(4,selectizeInput("ltySchoenfeldCI", "CI line type",
-                                  choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "1",
-                                  "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "2",
-                                  "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "3",
-                                  "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "4",
-                                  "\U2500 \U2500 \U2500 \U2500 \U2500" = "5",
-                                  "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "6"),
-                                  selected = "2")), 
+                            fluidRow( 
                               
-                              column(4,shinyjs::colourInput("curveColSchoenfeld", "Choose line color", value = "black")),
-                          
-
-                              column(4,shinyjs::colourInput("colSchoenfeldCI", "Choose color for CI", value = "black"))
+                              column(4,shinyjs::colourInput("curveColSchoenfeld", "Choose line color", value = "#204BD9")),
+                              column(4,shinyjs::colourInput("colSchoenfeldResiduals", "Choose color for residuals", value = "#000000")),
+                              column(4,shinyjs::colourInput("colSchoenfeldCI", "Choose color for CI", value = "#59A819"))
                             ),
 
                             fluidRow(
@@ -691,25 +962,47 @@ library("shinyBS")
                             ),
 
                             fluidRow(
-                              column(4, sliderInput("dfSchoenfeld", "Degrees of freedom for the spline", min = 2, max = 10, value = 2, step= 1)),
-                              column(4, numericInput("nsmoPH", "Number of points for the lines", value = 40))
+                              column(4, sliderInput("dfSchoenfeld", "Degrees of freedom for the spline", min = 2, max = 10, value = 4, step= 1)),
+                              column(4, numericInput("nsmoPH", "Number of points for the lines", value = 40)),
+                              column(4, sliderInput("alphaSchoenfeld", "Confidence Interval Opacity", min = 0, max = 1, value = 0.4, step= 0.1))
                               
-                            )
+                            ),
 
-                           
-
-                            
+                            fluidRow(
+                              column(4,shinyjs::colourInput("backgroundSchoenfeld", "Choose background color", value = "#FFFFFF")),
+                              column(4, selectInput("changeThemeSchoenfeld", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
+                                "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
+                                "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
+                              selected = "theme0"))
+                              
+                            )                            
                     ) 
                   )
                 )
               )
-            ) # End for Condition 3
+            ),# End for Condition 3
+
+
+
+            conditionalPanel(condition="input.selectAnalysis=='5'",
+
+              tabsetPanel(
+            
+               tabPanel('Model',
+
+                    DT::dataTableOutput('individualSurvivalPredictions'),
+                    verbatimTextOutput('rf')
+                )
+              )
+            ) # End for Condition 5
+
+
           ),
 
          tabPanel("Help",
 
-           h4(tags$b('Usage of the tool:')),
-           h5(tags$b('1. Data upload')),
+           h4(tags$b('Usage of the tool:'), id = "usage"),
+           h5(tags$b('1. Data upload'), id = "upload"),
            HTML('<p> Load your data set in *.txt file format using this tab.</p>'),
 
           HTML('<p>  
@@ -721,8 +1014,8 @@ library("shinyBS")
           HTML('<p><div align = "justify"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/dataUpload.jpg" width="400" height="300" border = "1000" alt="" ></td><td><img src="images/dataUpload2.jpg" width="550" height="300" border = "1000" alt=""></td></tr></table></div></p>'),
 
           br(),
-           h5(tags$b('2. Analysis')),
-            h5(tags$b('2.1. Life Table')),
+           h5(tags$b('2. Analysis'), id = "analysis"),
+            h5(tags$b('2.1. Life Table'), id = "lt"),
             HTML('<p>In order to perform Life Table analysis,</p>'),
 
             HTML('<p>  
@@ -748,7 +1041,7 @@ library("shinyBS")
                 </p>'),
 
           br(),
-            h5(tags$b('2.2. Kaplan-Meier')),
+            h5(tags$b('2.2. Kaplan-Meier'), id = "km"),
 
                HTML('<p>  
                   <ol>
@@ -780,7 +1073,7 @@ library("shinyBS")
 
          
           br(),
-            h5(tags$b('2.3. Cox Regression')),
+            h5(tags$b('2.3. Cox Regression'), id = "cox"),
 
                 HTML('<p>  
                   <ol>

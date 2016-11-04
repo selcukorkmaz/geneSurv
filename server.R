@@ -9,12 +9,16 @@ source("kaplanMeier.R")
 source("coxRegression.R")
 source("getDescriptiveResultsCoxRegression.R")
 source("stepwise.R")
+source("plotLT.R")
 require("ggplot2")
 source("ggsurv.R")
 source("ggsurv2.R")
 source("plotSchoenfeld.R")
 library("magrittr")
 library("dplyr")
+library("survminer")
+library("highcharter")
+library("randomForestSRC")
 
 
 
@@ -276,6 +280,110 @@ observe({
 
  ################################ Observe Cox Regression (end) #########################
  #######################################################################################
+
+
+################################ Observe Random Survival Forest (start) ###########################
+
+ observe({
+     updateSelectizeInput(session, "survivalTimeRF", choices = colnames(dataM()), selected = colnames(dataM())[1])
+ })
+
+ #############################################################
+ 
+ observe({
+     data_tmp <- dataM()
+     if (!is.null(data_tmp)){
+         updateSelectizeInput(session = session, inputId = "statusVariableRF", choices = colnames(data_tmp), selected = colnames(data_tmp)[2])
+     } else {
+         updateSelectizeInput(session = session, inputId = "statusVariableRF", choices = "", selected = "")
+     }
+ })
+
+  statusVarRF <- reactive({return(input$statusVariableRF)})
+
+ 
+ observe({
+     data_tmp <- dataM()
+     if (!is.null(data_tmp)){
+         idx <- which(colnames(data_tmp) %in% statusVarRF())
+         categories <- levels(as.factor(as.character(data_tmp[ ,idx])))
+         
+         updateSelectizeInput(session = session, inputId = "statusRF", choices = categories, selected = categories[2])
+     } else {
+         updateSelectizeInput(session = session, inputId = "statusRF", choices = "", selected = "")
+     }
+ })
+
+#############################################################
+
+observe({
+    updateSelectizeInput(session, "categoricalInputRF", choices = colnames(dataM()), selected = colnames(dataM())[6])
+})
+
+observe({
+    updateSelectizeInput(session, "continuousInputRF", choices = colnames(dataM()), selected = colnames(dataM())[4])
+})
+
+observe({
+
+      if(input$twoWayInteractionsRF || input$threeWayInteractionsRF){
+    
+       updateCheckboxInput(session, "customInteractionsRF", value = FALSE)
+
+    }
+
+  if(input$customInteractionsRF){
+    
+       updateCheckboxInput(session, "twoWayInteractionsRF", value = FALSE)
+       updateCheckboxInput(session, "threeWayInteractionsRF", value = FALSE)
+       updateCheckboxInput(session, "customInteractionsRF", value = TRUE)
+
+    }
+})
+
+observe({
+
+      if(input$customInteractionsRF){
+
+        updateSelectizeInput(session, "selectCustomInteractionsRF", choices = cInteractions(), selected = NULL)
+      }
+
+  })
+
+
+observe({
+
+      if(input$addTimeDependentCovariatesRF){
+
+        updateSelectizeInput(session, "selectTimeDependentVariablesRF", choices = colnames(dataM()), selected = NULL)
+      }
+
+  })
+
+
+strataVarNamesRF <- reactive({
+
+      colnames(dataM())
+
+  })
+
+
+observe({
+
+      if(input$addStrataRF){
+
+        updateSelectizeInput(session, "selectStrataVariableRF", choices = colnames(dataM()), selected = NULL)
+      }
+
+  })
+
+
+ ################################ Observe Random Survival Forest (end) #########################
+
+
+
+
+
  ###################### Life Table (start) #############################################
  
  output$descriptivesText <- renderText({
@@ -313,7 +421,7 @@ observe({
  
  result <- reactive({
  
-  if(input$run){
+  if(input$run || input$createLTPlot){
     dataSet = dataM()
     
     
@@ -633,6 +741,44 @@ output$survivaltableResult <- DT::renderDataTable({
     
 })
 
+
+factorGroup <- reactive({
+
+      names(resultKM()$testResult$survivalTable)
+
+  })                
+
+
+observe({
+
+      if(input$createSurvivalPlot){
+
+        updateSelectizeInput(session, "selectGroup", choices =  names(resultKM()$testResult$survivalTable), selected = NULL)
+      }
+
+  })
+
+output$survivalPlot <- highcharter::renderHighchart({
+
+
+    surv = resultKM()$testResult$survivalTable[[input$selectGroup]]
+
+    highchart() %>% hc_exporting(enabled = TRUE, filename = "survivalPlot") %>% 
+      hc_add_series(name = "Survival", type = "line", data = surv$`Cumulative probability of surviving`, showInLegend = FALSE, zIndex = 1, marker = list(lineColor = "black", lineWidth = 1), lineWidth = 0, id = "survival") %>%
+      hc_add_series(name = "CI", data = as.matrix(cbind(surv$`Lower limit`, surv$`Upper limit`)),type = "errorbar", names = "Limits", showInLegend = FALSE, zIndex = 0, lineWidth = 1.5, linkedTo = "survival") %>%
+      hc_chart(zoomType = "xy", inverted = TRUE) %>%
+      hc_xAxis(categories = as.character(surv$Time), title = list(text = "Time")) %>%
+      hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Survival")) %>%
+      #hc_plotOptions(tooltip = list(headerFormat = "<b>Time: </b>{point.x}")) %>%
+      hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+      hc_plotOptions(line = list(tooltip = list(pointFormat = "<b>{series.name}: </b>{point.y:.3f} ")), 
+                     errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+      hc_add_theme(hc_theme_google())
+
+
+  })
+
+
 meanMedianSurvivalTimesReactive <- reactive({
     
     if(input$runKM){
@@ -697,6 +843,42 @@ output$hazardRatioResultKM <- DT::renderDataTable({
 })
 
 
+
+observe({
+
+      if(input$createHazardPlot){
+
+        updateSelectizeInput(session, "selectGroupHazard", choices =  names(resultKM()$testResult$hazardRatio), selected = NULL)
+      }
+
+  })
+
+output$hazardPlot <- highcharter::renderHighchart({
+
+
+    hazard = resultKM()$testResult$hazardRatio[[input$selectGroupHazard]]
+
+    highchart() %>% hc_exporting(enabled = TRUE, filename = "hazardPlot") %>% 
+      hc_add_series(name = "Hazard", type = "line", data = hazard$Hazard.Ratio, showInLegend = FALSE, zIndex = 1, marker = list(lineColor = "black", lineWidth = 1), lineWidth = 0, id = "hazard") %>%
+      hc_add_series(name = "CI", data = as.matrix(cbind(hazard$Lower, hazard$Upper)),type = "errorbar", names = "Limits", showInLegend = FALSE, zIndex = 0, lineWidth = 1.5, linkedTo = "hazard") %>%
+      hc_chart(zoomType = "xy", inverted = TRUE) %>%
+      hc_xAxis(categories = as.character(hazard$Time), title = list(text = "Time")) %>%
+      hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Hazard Ratio")) %>%
+      #hc_plotOptions(tooltip = list(headerFormat = "<b>Time: </b>{point.x}")) %>%
+      hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+      hc_plotOptions(line = list(tooltip = list(pointFormat = "<b>{series.name}: </b>{point.y:.3f} ")), 
+                     errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+      hc_add_theme(hc_theme_google())
+
+
+  })
+
+
+
+
+
+
+
 comparisonTestReactiveKM <- reactive({
     
     if(input$factorVarKM && input$compTestKM && input$runKM){
@@ -724,6 +906,16 @@ output$comparisonTestResultsKM <- DT::renderDataTable({
 ###################### Kaplan-Meier (end) ###################################################
 #############################################################################################
 ###################### Cox Regression (start) #################################################
+
+output$displaySummaryCox <- renderText({
+  if(!is.null(input$categoricalInput) || !is.null(input$continuousInput)){
+
+    if (input$runCox){
+        'Model Summary'
+    }
+
+  }  
+})
 
 
 output$displayCoefficientEstimatesCox <- renderText({
@@ -935,6 +1127,15 @@ resultCox <- reactive({
 #})
 
 
+output$summaryCox <- renderPrint({
+
+      if(input$runCox){
+        summary <- resultCox()$testResult$ModelSummaryList
+        summary
+      }else{summary = NULL}
+  })
+
+
 displayCoefficientEstimatesReactive <- reactive({
     
 
@@ -997,6 +1198,58 @@ output$hazardRatioResultCox <- DT::renderDataTable({
     ))
     
 })
+
+
+hazardError <- reactive({
+
+    if(input$createHazardCoxPlot){
+    
+          cox = resultCox()$testResult$hazardRatioResults
+
+          if(nrow(cox)>1){
+    
+            cox = cbind.data.frame("Variable" = levels(cox$Variable), apply(cox[,-1],2, as.numeric))
+    
+           }else{
+
+            cox = cbind.data.frame("Variable" = levels(cox$Variable), as.data.frame(t(apply(cox[,-1],2, as.numeric))))
+
+           }   
+
+         highchart() %>% hc_exporting(enabled = TRUE, filename = "hazardPlot") %>% 
+          hc_add_series(name = "Hazard", type = "line", data = cox$`Hazard ratio`, showInLegend = FALSE, zIndex = 1, marker = list(lineColor = "black", lineWidth = 1), lineWidth = 0, id = "hazard") %>%
+          hc_add_series(name = "CI", data = as.matrix(cbind(cox$`Lower limit (95%)`, cox$`Upper limit (95%)`)),type = "errorbar", names = "Limits", showInLegend = FALSE, zIndex = 0, lineWidth = 1.5, linkedTo = "hazard") %>%
+          hc_chart(zoomType = "xy", inverted = TRUE) %>%
+          hc_xAxis(categories = matrix(cox$Variable, ncol = 1)) %>%
+          hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Hazard Ratio"), plotLines = list(list(value = 1, width = 2, color = "green", dashStyle = "Dash"))) %>%
+          #hc_plotOptions(tooltip = list(headerFormat = "<b>Time: </b>{point.x}")) %>%
+          hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Variable: </b>{point.x} <br>") %>%
+          hc_plotOptions(line = list(tooltip = list(pointFormat = "<b>{series.name}: </b>{point.y:.3f} ")), 
+                         errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+          hc_add_theme(hc_theme_google())
+    
+    }
+
+  })
+
+output$hazardErrorbar <- highcharter::renderHighchart({
+
+      if(is.null(input$categoricalInput) && is.null(input$continuousInput)){ 
+
+          p = NULL
+
+    }else{  
+
+    if(input$runCox && input$hrcox){
+    
+    hazardError()
+
+
+    }else{p = NULL}
+  }
+    
+})
+
 
 
 goodnessOfFitTestsResultsReactiveCox <- reactive({
@@ -1278,9 +1531,22 @@ kmCurves <- reactive({
 
     if(!is.null(fctr)){
         compareCurves <- survfit(Surv(time, statusVar == TRUE) ~ factors, data = newData, conf.type = ci, error = varianceEstimation, conf.int = confidenceLevel/100)
+    
+
+        for(i in 1:length(names(compareCurves$strata))) {
+          
+            names(compareCurves$strata)[i] = gsub("factors", input$factorKM, names(compareCurves$strata)[i])
+          
+        }
+
+
+
+
     }else{
         compareCurves <- survfit(Surv(time, statusVar == TRUE) ~ 1, data = newData, conf.type = ci, error = varianceEstimation, conf.int = confidenceLevel/100)
     }
+
+
 
 
       return(compareCurves)
@@ -1289,215 +1555,520 @@ kmCurves <- reactive({
   })
 
 
+theme <- reactive({
+
+    if(input$changeTheme == "theme1"){
+
+      hc_theme_538()
+
+    }
+
+    else if(input$changeTheme == "theme2"){
+
+      hc_theme_economist()
+      
+    }
+    else if(input$changeTheme == "theme3"){
+
+      hc_theme_ft()
+      
+    }
+
+    else if(input$changeTheme == "theme4"){
+
+      hc_theme_db()
+      
+    }
+    else if(input$changeTheme == "theme5"){
+
+      hc_theme_flat()
+      
+    }
+    else if(input$changeTheme == "theme6"){
+
+      hc_theme_flatdark()
+      
+    }
+
+    else if(input$changeTheme == "theme7"){
+
+      hc_theme_smpl()
+      
+    }
+   else if(input$changeTheme == "theme8"){
+
+      hc_theme_elementary()
+      
+    }
+   else if(input$changeTheme == "theme9"){
+
+      hc_theme_google()
+      
+    }
+
+   else if(input$changeTheme == "theme10"){
+
+      hc_theme_gridlight()
+      
+    }
+   else if(input$changeTheme == "theme11"){
+
+      hc_theme_sandsignika()
+      
+    }
+
+
+
+
+
+  })
+
+
+
+    selectBackgroundColor <- reactive({
+
+        if(input$changeTheme == "theme0" || input$changeTheme == "theme7" || input$changeTheme == "theme8" || input$changeTheme == "theme9" || input$changeTheme == "theme10" || input$changeTheme == "theme11"){
+
+          "#FFFFFF"
+
+        }else{
+
+
+            theme()$chart$backgroundColor
+        }
+
+    })
+
+
+
+    observe({
+
+        shinyjs::updateColourInput(session, "backgroundKM", value = selectBackgroundColor())
+
+      }, priority = 100)
+
+
+
+
+
+
+
 kmPlot <- reactive({
 
     if(input$factorVarKM){
         fctr = input$factorKM
-    }else{fctr = NULL}
-
-
-  if(!is.null(fctr)){
-
-    if(input$addCI == "Ribbon"){
-        
-        p <- ggsurv(kmCurves(), CI = "NULL", plot.cens = T, surv.col = 'gg.def',
-        cens.col = input$censColKM, lty.est = input$ltyKM, lty.ci = input$ltyKMCI,
-        cens.shape = input$censShapeKM, back.white = T, xlab = input$xlabKM,
-        ylab = input$ylabKM, main = input$mainPanelKM) + theme_bw()+geom_ribbon(aes(ymin=low, ymax=up, fill=group),alpha= input$alpha, show.legend = FALSE)+guides(fill=guide_legend(input$factorKM))#+ 
-        #scale_x_continuous(breaks=seq(input$xAxisLowerKM, input$xAxisUpperKM, by=round((input$xAxisUpperKM-input$xAxisLowerKM)/10,0)))+
-        #scale_y_continuous(breaks=seq(min(compareCurves$surv), max(compareCurves$surv), by=((max(compareCurves$surv)-min(compareCurves$surv))/10)))
-
-        
+        enabledLegend = TRUE
+    }else{
+      fctr = NULL
+      enabledLegend = FALSE
     }
-    
-    if(input$addCI == "Line"){
-        
-        p <- ggsurv(kmCurves(), CI = T, plot.cens = T, surv.col = 'gg.def',
-        cens.col = input$censColKM, lty.est = input$ltyKM, lty.ci = input$ltyKMCI,
-        cens.shape = input$censShapeKM, back.white = T, xlab = input$xlabKM,
-        ylab = input$ylabKM, main = input$mainPanelKM)+guides(fill=guide_legend(input$factorKM))#+ 
-        #scale_x_continuous(breaks=seq(min(compareCurves$time), max(compareCurves$time), by=round((max(compareCurves$time)-min(compareCurves$time))/10,0)))+
-        #scale_y_continuous(breaks=seq(min(compareCurves$surv), max(compareCurves$surv), by=((max(compareCurves$surv)-min(compareCurves$surv))/10)))
 
-        
+
+  
+
+      is.even <- function(x) x %% 2 == 0
+
+      ranges = input$addCI
+
+      p = hchart(kmCurves(), ranges = ranges, type = "line", markTimes = input$addCens, symbol = input$censShapeKM, markerColor = input$censColKM, 
+                 animation = TRUE, rangesOpacity = input$alpha)# %>% hc_colors(cols)#, xAxis = list(crosshair = list(width = 1, color = "#000")))
+
+
+      if(ranges){
+        if(!is.null(fctr)){
+
+          for(i in 1:length(p$x$hc_opts$series)){
+
+            if(is.even(i)){
+              p$x$hc_opts$series[[i]]$name = "CI (95%)"
+
+            }
+
+          }
+        }else{
+
+            p$x$hc_opts$series[[2]]$name = "CI (95%)"
+
+
+          }
+      }
+
+
+
+    if(input$changeTheme == "theme0"){
+
+        p2 = p %>% hc_exporting(enabled = TRUE, filename = "plot") %>% 
+          hc_title(text = input$mainPanelKM) %>%  
+          hc_xAxis(title = list(text = input$xlabKM), tickInterval=NULL, tickLength = 5, lineWidth = 1)  %>%  
+          hc_yAxis(title = list(text = input$ylabKM), lineWidth = 1, tickLength = 5, tickWidth= 1, labels = list(format = "{value:.2f}")) %>% 
+          #hc_colors("#440154") %>%
+          hc_chart(backgroundColor = input$backgroundKM, zoomType = "xy") %>% 
+          hc_legend(enabled = enabledLegend) %>% 
+          hc_plotOptions(line = list(dashStyle = input$ltyKM), area = list(zIndex = 15), series = list(enableMouseTracking = TRUE)) %>% 
+          hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 3, followTouchMove = FALSE, headerFormat = "<b>Time</b>: {point.key} <br>")#, pointFormat = "{series.name}: {point.y}")
+
+
+    }else{
+
+        p2 = p %>% hc_exporting(enabled = TRUE, filename = "plot") %>% 
+          hc_title(text = input$mainPanelKM) %>%  
+          hc_xAxis(title = list(text = input$xlabKM), tickInterval=NULL, tickLength = 5, lineWidth = 1)  %>%  
+          hc_yAxis(title = list(text = input$ylabKM), lineWidth = 1, tickLength = 5, tickWidth= 1, labels = list(format = "{value:.2f}")) %>% 
+          #hc_colors("#440154") %>%
+          hc_add_theme(theme()) %>%
+          hc_chart(backgroundColor = input$backgroundKM, zoomType = "xy") %>% 
+          hc_legend(enabled = enabledLegend) %>% 
+          hc_plotOptions(line = list(dashStyle = input$ltyKM), area = list(zIndex = 15), series = list(enableMouseTracking = TRUE)) %>% 
+          hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 3, followTouchMove = FALSE, headerFormat = "<b>Time</b>: {point.key} <br>")#, pointFormat = "{series.name}: {point.y}")
     }
-    
-    if(input$addCI == "None"){
-        
-        p <- ggsurv(kmCurves(), CI = 'def', plot.cens = T, surv.col = 'gg.def',
-        cens.col = input$censColKM, lty.est = input$ltyKM, lty.ci = input$ltyKMCI,
-        cens.shape = input$censShapeKM, back.white = F, xlab = input$xlabKM,
-        ylab = input$ylabKM, main = input$mainPanelKM) + theme_bw()#+ 
-        #scale_x_continuous(breaks=seq(min(compareCurves$time), max(compareCurves$time), by=round((max(compareCurves$time)-min(compareCurves$time))/10,0)))+
-        #scale_y_continuous(breaks=seq(min(compareCurves$surv), max(compareCurves$surv), by=((max(compareCurves$surv)-min(compareCurves$surv))/10)))
-
-        
-    }
-    
-  }else{
-    
-    if(input$addCI == "Ribbon"){
-        
-        p <- ggsurv(kmCurves(), CI = "NULL", plot.cens = T, surv.col = input$curveColKM,
-        cens.col = input$censColKM, lty.est = input$ltyKM, lty.ci = input$ltyKMCI,
-        cens.shape = input$censShapeKM, back.white = T, xlab = input$xlabKM,
-        ylab = input$ylabKM, main = input$mainPanelKM) + theme_bw()+geom_ribbon(aes(ymin=low, ymax=up, fill= "red"),alpha= input$alpha, show.legend = FALSE)
-       # + scale_x_continuous(breaks=seq(min(compareCurves$time), max(compareCurves$time), by=round((max(compareCurves$time)-min(compareCurves$time))/10,0)))+
-       # scale_y_continuous(breaks=seq(min(compareCurves$surv), max(compareCurves$surv), by=((max(compareCurves$surv)-min(compareCurves$surv))/10)))
-
-    }
-    
-    if(input$addCI == "Line"){
-        
-        p <- ggsurv(kmCurves(), CI = T, plot.cens = T, surv.col = input$curveColKM,
-        cens.col = input$censColKM, lty.est = input$ltyKM, lty.ci = input$ltyKMCI,
-        cens.shape = input$censShapeKM, back.white = T, xlab = input$xlabKM,
-        ylab = input$ylabKM, main = input$mainPanelKM)#+ 
-        #scale_x_continuous(breaks=seq(min(compareCurves$time), max(compareCurves$time), by=round((max(compareCurves$time)-min(compareCurves$time))/10,0)))+
-        #scale_y_continuous(breaks=seq(min(compareCurves$surv), max(compareCurves$surv), by=((max(compareCurves$surv)-min(compareCurves$surv))/10)))
-
-        
-    }
-    
-    if(input$addCI == "None"){
-        
-        p <- ggsurv(kmCurves(), CI = "NULL", plot.cens = T, surv.col = input$curveColKM,
-        cens.col = input$censColKM, lty.est = input$ltyKM, lty.ci = input$ltyKMCI,
-        cens.shape = input$censShapeKM, back.white = F, xlab = input$xlabKM,
-        ylab = input$ylabKM, main = input$mainPanelKM) + theme_bw()#+ 
-        #scale_x_continuous(breaks=seq(min(compareCurves$time), max(compareCurves$time), by=round((max(compareCurves$time)-min(compareCurves$time))/10,0)))+
-        #scale_y_continuous(breaks=seq(min(compareCurves$surv), max(compareCurves$surv), by=((max(compareCurves$surv)-min(compareCurves$surv))/10)))
-
-        
-        
-    }
-}
-
-
-plotly::ggplotly(p)
-
+        p2
 
 })
+
+
+
+themeHazard <- reactive({
+
+    if(input$changeThemeHazard == "theme1"){
+
+      hc_theme_538()
+
+    }
+
+    else if(input$changeThemeHazard == "theme2"){
+
+      hc_theme_economist()
+      
+    }
+    else if(input$changeThemeHazard == "theme3"){
+
+      hc_theme_ft()
+      
+    }
+
+    else if(input$changeThemeHazard == "theme4"){
+
+      hc_theme_db()
+      
+    }
+    else if(input$changeThemeHazard == "theme5"){
+
+      hc_theme_flat()
+      
+    }
+    else if(input$changeThemeHazard == "theme6"){
+
+      hc_theme_flatdark()
+      
+    }
+
+    else if(input$changeThemeHazard == "theme7"){
+
+      hc_theme_smpl()
+      
+    }
+   else if(input$changeThemeHazard == "theme8"){
+
+      hc_theme_elementary()
+      
+    }
+   else if(input$changeThemeHazard == "theme9"){
+
+      hc_theme_google()
+      
+    }
+
+   else if(input$changeThemeHazard == "theme10"){
+
+      hc_theme_gridlight()
+      
+    }
+   else if(input$changeThemeHazard == "theme11"){
+
+      hc_theme_sandsignika()
+      
+    }
+
+
+
+
+
+  })
+
+
+    selectBackgroundColorHazard <- reactive({
+
+        if(input$changeThemeHazard == "theme0" || input$changeThemeHazard == "theme7" || input$changeThemeHazard == "theme8" || input$changeThemeHazard == "theme9" || input$changeThemeHazard == "theme10" || input$changeThemeHazard == "theme11"){
+
+          "#FFFFFF"
+
+        }else{
+
+
+            themeHazard()$chart$backgroundColor
+        }
+
+    })
+
+
+  observe({
+
+    shinyjs::updateColourInput(session, "backgroundHazard", value = selectBackgroundColorHazard())
+
+  })
+
 
 
 
 hazardPlot <- reactive({
     
-
     if(input$factorVarKM){
         fctr = input$factorKM
-    }else{fctr = NULL}
-
-    
-    hcompareCurves = kmCurves()
-    
-    hcompareCurves$surv = -log(hcompareCurves$surv)
-    hcompareCurves$lower = -log(hcompareCurves$lower)
-    hcompareCurves$upper = -log(hcompareCurves$upper)
-    
-    
-    if(!is.null(fctr)){
-        
-        if(input$addCIhazard == "Ribbon"){
-            
-            ph <- ggsurv2(hcompareCurves, CI = "NULL", plot.cens = T, surv.col = 'gg.def',
-            cens.col = input$censColHazard, lty.est = input$ltyHazard, lty.ci = input$ltyHazardCI,
-            cens.shape = input$censShapeHazard, back.white = T, xlab = input$xlabHazard,
-            ylab = input$ylabHazard, main = input$mainPanelHazard) + theme_bw()+geom_ribbon(aes(ymin=low, ymax=up, fill=group),alpha= input$alphaHazard, show.legend = FALSE)+guides(fill=guide_legend(input$factorKM))
-            #+ scale_x_continuous(breaks=seq(min(hcompareCurves$time), max(hcompareCurves$time), by=round((max(hcompareCurves$time)-min(hcompareCurves$time))/10,0)))+
-            #scale_y_continuous(breaks=seq(min(hcompareCurves$surv), max(hcompareCurves$surv), by=((max(hcompareCurves$surv)-min(hcompareCurves$surv))/10)))
-
-        }
-        
-        if(input$addCIhazard == "Line"){
-            
-            ph <- ggsurv2(hcompareCurves, CI = T, plot.cens = T, surv.col = 'gg.def',
-            cens.col = input$censColHazard, lty.est = input$ltyHazard, lty.ci = input$ltyHazardCI,
-            cens.shape = input$censShapeHazard, back.white = T, xlab = input$xlabHazard,
-            ylab = input$ylabHazard, main = input$mainPanelHazard)+guides(fill=guide_legend(input$factorKM))
-            #  + scale_x_continuous(breaks=seq(min(hcompareCurves$time), max(hcompareCurves$time), by=round((max(hcompareCurves$time)-min(hcompareCurves$time))/10,0)))+
-           # scale_y_continuous(breaks=seq(min(hcompareCurves$surv), max(hcompareCurves$surv), by=((max(hcompareCurves$surv)-min(hcompareCurves$surv))/10)))
-
-            
-        }
-        
-        if(input$addCIhazard == "None"){
-            
-            ph <- ggsurv2(hcompareCurves, CI = 'def', plot.cens = T, surv.col = 'gg.def',
-            cens.col = input$censColHazard, lty.est = input$ltyHazard, lty.ci = input$ltyHazardCI,
-            cens.shape = input$censShapeHazard, back.white = F, xlab = input$xlabHazard,
-            ylab = input$ylabHazard, main = input$mainPanelHazard) + theme_bw()+guides(fill=guide_legend(input$factorKM))
-            #  + scale_x_continuous(breaks=seq(min(hcompareCurves$time), max(hcompareCurves$time), by=round((max(hcompareCurves$time)-min(hcompareCurves$time))/10,0)))+
-            #scale_y_continuous(breaks=seq(min(hcompareCurves$surv), max(hcompareCurves$surv), by=((max(hcompareCurves$surv)-min(hcompareCurves$surv))/10)))
-
-            
-        }
-        
+        enabledLegend = TRUE
     }else{
-        
-        if(input$addCIhazard == "Ribbon"){
-            
-            ph <- ggsurv2(hcompareCurves, CI = "NULL", plot.cens = T, surv.col = input$curveColHazard,
-            cens.col = input$censColHazard, lty.est = input$ltyHazard, lty.ci = input$ltyHazardCI,
-            cens.shape = input$censShapeHazard, back.white = T, xlab = input$xlabHazard,
-            ylab = input$ylabHazard, main = input$mainPanelHazard) + theme_bw()+geom_ribbon(aes(ymin=low, ymax=up, fill= "red"),alpha= input$alphaHazard, show.legend = FALSE)
-            #  + scale_x_continuous(breaks=seq(min(hcompareCurves$time), max(hcompareCurves$time), by=round((max(hcompareCurves$time)-min(hcompareCurves$time))/10,0)))+
-            #scale_y_continuous(breaks=seq(min(hcompareCurves$surv), max(hcompareCurves$surv), by=((max(hcompareCurves$surv)-min(hcompareCurves$surv))/10)))
-
-            
-        }
-        
-        if(input$addCIhazard == "Line"){
-            
-            ph <- ggsurv2(hcompareCurves, CI = T, plot.cens = T, surv.col = input$curveColHazard,
-            cens.col = input$censColHazard, lty.est = input$ltyHazard, lty.ci = input$ltyHazardCI,
-            cens.shape = input$censShapeHazard, back.white = T, xlab = input$xlabHazard,
-            ylab = input$ylabHazard, main = input$mainPanelHazard)
-            #  + scale_x_continuous(breaks=seq(min(hcompareCurves$time), max(hcompareCurves$time), by=round((max(hcompareCurves$time)-min(hcompareCurves$time))/10,0)))+
-            #scale_y_continuous(breaks=seq(min(hcompareCurves$surv), max(hcompareCurves$surv), by=((max(hcompareCurves$surv)-min(hcompareCurves$surv))/10)))
-
-            
-        }
-        
-        if(input$addCIhazard == "None"){
-            
-            ph <- ggsurv2(hcompareCurves, CI = "NULL", plot.cens = T, surv.col = input$curveColHazard,
-            cens.col = input$censColHazard, lty.est = input$ltyHazard, lty.ci = input$ltyHazardCI,
-            cens.shape = input$censShapeHazard, back.white = F, xlab = input$xlabHazard,
-            ylab = input$ylabHazard, main = input$mainPanelHazard) + theme_bw()
-            #  + scale_x_continuous(breaks=seq(min(hcompareCurves$time), max(hcompareCurves$time), by=round((max(hcompareCurves$time)-min(hcompareCurves$time))/10,0)))+
-            #scale_y_continuous(breaks=seq(min(hcompareCurves$surv), max(hcompareCurves$surv), by=((max(hcompareCurves$surv)-min(hcompareCurves$surv))/10)))
-
-            
-            
-        }
+      fctr = NULL
+      enabledLegend = FALSE
     }
-    
-    
-    plotly::ggplotly(ph)
-    
-    
+
+
+  
+
+      is.even <- function(x) x %% 2 == 0
+
+      ranges = input$addCIHazard
+
+      p = hchart(kmCurves(), fun = "cumhaz", ranges = ranges, type = "line", markTimes = input$addCensHazard, symbol = input$censShapeHazard, markerColor = input$censColHazard, 
+                 animation = TRUE, rangesOpacity = input$alphaHazard)# %>% hc_colors(cols)#, xAxis = list(crosshair = list(width = 1, color = "#000")))
+
+
+      if(ranges){
+        if(!is.null(fctr)){
+
+          for(i in 1:length(p$x$hc_opts$series)){
+
+            if(is.even(i)){
+              p$x$hc_opts$series[[i]]$name = "CI (95%)"
+
+            }
+
+          }
+        }else{
+
+            p$x$hc_opts$series[[2]]$name = "CI (95%)"
+
+
+          }
+      }
+
+    if(input$changeThemeHazard == "theme0"){
+
+      p2 = p %>% hc_exporting(enabled = TRUE, filename = "plot") %>% 
+        hc_title(text = input$mainPanelHazard) %>%  
+        hc_xAxis(title = list(text = input$xlabHazard), tickInterval=NULL, tickLength = 5, lineWidth = 1)  %>%  
+        hc_yAxis(title = list(text = input$ylabHazard), lineWidth = 1, tickLength = 5, tickWidth= 1, labels = list(format = "{value:.2f}")) %>% 
+        #hc_colors("#440154") %>%
+        hc_chart(backgroundColor = input$backgroundHazard, zoomType = "xy") %>% 
+        hc_legend(enabled = enabledLegend) %>% 
+        hc_plotOptions(line = list(dashStyle = input$ltyHazard), area = list(zIndex = 15), series = list(enableMouseTracking = TRUE)) %>% 
+        hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 3, followTouchMove = FALSE, headerFormat = "<b>Time</b>: {point.key} <br>")#, pointFormat = "{series.name}: {point.y}")
+
+
+   }else{
+
+      p2 = p %>% hc_exporting(enabled = TRUE, filename = "plot") %>% 
+        hc_title(text = input$mainPanelHazard) %>%  
+        hc_xAxis(title = list(text = input$xlabHazard), tickInterval=NULL, tickLength = 5, lineWidth = 1)  %>%  
+        hc_yAxis(title = list(text = input$ylabHazard), lineWidth = 1, tickLength = 5, tickWidth= 1, labels = list(format = "{value:.2f}")) %>% 
+        #hc_colors("#440154") %>%
+        hc_add_theme(themeHazard()) %>%
+        hc_chart(backgroundColor = input$backgroundHazard, zoomType = "xy") %>% 
+        hc_legend(enabled = enabledLegend) %>% 
+        hc_plotOptions(line = list(dashStyle = input$ltyHazard), area = list(zIndex = 15), series = list(enableMouseTracking = TRUE)) %>% 
+        hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 3, followTouchMove = FALSE, headerFormat = "<b>Time</b>: {point.key} <br>")#, pointFormat = "{series.name}: {point.y}")
+    }
+      p2
     
     
 })
 
 
 
- output$kmCurvePlot <- plotly::renderPlotly({
+
+themeLml <- reactive({
+  
+  if(input$changeThemeLml == "theme1"){
+    
+    hc_theme_538()
+    
+  }
+  
+  else if(input$changeThemeLml == "theme2"){
+    
+    hc_theme_economist()
+    
+  }
+  else if(input$changeThemeLml == "theme3"){
+    
+    hc_theme_ft()
+    
+  }
+  
+  else if(input$changeThemeLml == "theme4"){
+    
+    hc_theme_db()
+    
+  }
+  else if(input$changeThemeLml == "theme5"){
+    
+    hc_theme_flat()
+    
+  }
+  else if(input$changeThemeLml == "theme6"){
+    
+    hc_theme_flatdark()
+    
+  }
+  
+  else if(input$changeThemeLml == "theme7"){
+    
+    hc_theme_smpl()
+    
+  }
+  else if(input$changeThemeLml == "theme8"){
+    
+    hc_theme_elementary()
+    
+  }
+  else if(input$changeThemeLml == "theme9"){
+    
+    hc_theme_google()
+    
+  }
+  
+  else if(input$changeThemeLml == "theme10"){
+    
+    hc_theme_gridlight()
+    
+  }
+  else if(input$changeThemeLml == "theme11"){
+    
+    hc_theme_sandsignika()
+    
+  }
+  
+  
+  
+  
+  
+})
+
+selectBackgroundColorLml <- reactive({
+  
+  if(input$changeThemeLml == "theme0" || input$changeThemeLml == "theme7" || input$changeThemeLml == "theme8" || input$changeThemeLml == "theme9" || input$changeThemeLml == "theme10" || input$changeThemeLml == "theme11"){
+    
+    "#FFFFFF"
+    
+  }else{
+    
+    
+    themeLml()$chart$backgroundColor
+  }
+  
+})
+
+observe({
+  
+  shinyjs::updateColourInput(session, "backgroundLml", value = selectBackgroundColorLml())
+  
+})
+
+
+LmlPlot <- reactive({
+  
+  if(input$factorVarKM){
+    fctr = input$factorKM
+    enabledLegend = TRUE
+  }else{
+    fctr = NULL
+    enabledLegend = FALSE
+  }
+  
+  
+  
+  
+  is.even <- function(x) x %% 2 == 0
+  
+  ranges = input$addCILml
+  
+  p = hchart(kmCurves(), fun = "cloglog", ranges = ranges, type = "line", markTimes = input$addCensLml, symbol = input$censShapeLml, markerColor = input$censColLml, 
+             animation = TRUE, rangesOpacity = input$alphaLml)# %>% hc_colors(cols)#, xAxis = list(crosshair = list(width = 1, color = "#000")))
+  
+  
+  if(ranges){
+    if(!is.null(fctr)){
+      
+      for(i in 1:length(p$x$hc_opts$series)){
+        
+        if(is.even(i)){
+          p$x$hc_opts$series[[i]]$name = "CI (95%)"
+          
+        }
+        
+      }
+    }else{
+      
+      p$x$hc_opts$series[[2]]$name = "CI (95%)"
+      
+      
+    }
+  }
+  
+  if(input$changeThemeLml == "theme0"){
+    
+    p2 = p %>% hc_exporting(enabled = TRUE, filename = "plot") %>% 
+      hc_title(text = input$mainPanelLml) %>%  
+      hc_xAxis(title = list(text = input$xlabLml), tickInterval=NULL, tickLength = 5, lineWidth = 1)  %>%  
+      hc_yAxis(title = list(text = input$ylabLml), lineWidth = 1, tickLength = 5, tickWidth= 1, labels = list(format = "{value:.2f}")) %>% 
+      #hc_colors("#440154") %>%
+      hc_chart(backgroundColor = input$backgroundLml, zoomType = "xy") %>% 
+      hc_legend(enabled = enabledLegend) %>% 
+      hc_plotOptions(line = list(dashStyle = input$ltyLml), area = list(zIndex = 15), series = list(enableMouseTracking = TRUE)) %>% 
+      hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 3, followTouchMove = FALSE, headerFormat = "<b>Time</b>: {point.key} <br>")#, pointFormat = "{series.name}: {point.y}")
+    
+    
+  }else{
+    
+    p2 = p %>% hc_exporting(enabled = TRUE, filename = "plot") %>% 
+      hc_title(text = input$mainPanelLml) %>%  
+      hc_xAxis(title = list(text = input$xlabLml), tickInterval=NULL, tickLength = 5, lineWidth = 1)  %>%  
+      hc_yAxis(title = list(text = input$ylabLml), lineWidth = 1, tickLength = 5, tickWidth= 1, labels = list(format = "{value:.2f}")) %>% 
+      #hc_colors("#440154") %>%
+      hc_add_theme(themeLml()) %>%
+      hc_chart(backgroundColor = input$backgroundLml, zoomType = "xy") %>% 
+      hc_legend(enabled = enabledLegend) %>% 
+      hc_plotOptions(line = list(dashStyle = input$ltyLml), area = list(zIndex = 15), series = list(enableMouseTracking = TRUE)) %>% 
+      hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 3, followTouchMove = FALSE, headerFormat = "<b>Time</b>: {point.key} <br>")#, pointFormat = "{series.name}: {point.y}")
+  }
+  p2
+  
+  
+})
+
+
+
+
+ output$LTCurvePlot <- plotly::renderPlotly({
      
-     if(input$createKmPlot  && input$selectPlotKM == '1'){
+     if(input$createLTPlot){
          
-         kmPlot()
+         plotLT(result(), lty.est = input$ltyLT, xlab = input$xlabLT,
+                 ylab = input$ylabLT, main = input$mainPanelLT)
          
      }
      
-    else if(input$createKmPlot && input$selectPlotKM == '2'){
-         
-         hazardPlot()
-         
-     }
-     
+   
  })
+
   
 schoenfeldPlotReactive <- reactive({
 
@@ -1510,6 +2081,49 @@ schoenfeldPlotReactive <- reactive({
     }
     cph
   })
+
+
+# output$kmCurvePlot <- plotly::renderPlotly({
+     
+ #    if(input$createKmPlot  && input$selectPlotKM == '1'){
+ #        
+ #        kmPlot()
+ #        
+ #    }
+ #    
+ #   else if(input$createKmPlot && input$selectPlotKM == '2'){
+ #        
+ #        hazardPlot()
+ #        
+ #    }
+ #    
+ #})
+
+
+ output$kmCurvePlot <- highcharter::renderHighchart({
+     
+     if(input$createKmPlot && input$selectPlotKM == 1){
+         
+         kmPlot()
+         
+     }
+
+
+     else if(input$createKmPlot && input$selectPlotKM == 2){
+         
+         hazardPlot()
+         
+     }
+
+     else if(input$createKmPlot && input$selectPlotKM == 3){
+         
+         LmlPlot()
+         
+     }
+    
+     
+ })
+
 
 
 cInteractions <- reactive({
@@ -1588,6 +2202,93 @@ if(!is.null(input$categoricalInput) || !is.null(input$continuousInput)){
    }
 
   } 
+})
+
+
+themeSchoenfeld <- reactive({
+  
+  if(input$changeThemeSchoenfeld == "theme1"){
+    
+    hc_theme_538()
+    
+  }
+  
+  else if(input$changeThemeSchoenfeld == "theme2"){
+    
+    hc_theme_economist()
+    
+  }
+  else if(input$changeThemeSchoenfeld == "theme3"){
+    
+    hc_theme_ft()
+    
+  }
+  
+  else if(input$changeThemeSchoenfeld == "theme4"){
+    
+    hc_theme_db()
+    
+  }
+  else if(input$changeThemeSchoenfeld == "theme5"){
+    
+    hc_theme_flat()
+    
+  }
+  else if(input$changeThemeSchoenfeld == "theme6"){
+    
+    hc_theme_flatdark()
+    
+  }
+  
+  else if(input$changeThemeSchoenfeld == "theme7"){
+    
+    hc_theme_smpl()
+    
+  }
+  else if(input$changeThemeSchoenfeld == "theme8"){
+    
+    hc_theme_elementary()
+    
+  }
+  else if(input$changeThemeSchoenfeld == "theme9"){
+    
+    hc_theme_google()
+    
+  }
+  
+  else if(input$changeThemeSchoenfeld == "theme10"){
+    
+    hc_theme_gridlight()
+    
+  }
+  else if(input$changeThemeSchoenfeld == "theme11"){
+    
+    hc_theme_sandsignika()
+    
+  }
+   
+  
+})
+
+observe({
+  
+  shinyjs::updateColourInput(session, "backgroundSchoenfeld", value = selectBackgroundColorSchoenfeld())
+  
+})
+
+
+selectBackgroundColorSchoenfeld <- reactive({
+  
+  if(input$changeThemeSchoenfeld == "theme0" || input$changeThemeSchoenfeld == "theme7" || input$changeThemeSchoenfeld == "theme8" || input$changeThemeSchoenfeld == "theme9" || input$changeThemeSchoenfeld == "theme10" || input$changeThemeSchoenfeld == "theme11"){
+    
+    "#FFFFFF"
+    
+  }else{
+    
+    
+    themeSchoenfeld()$chart$backgroundColor
+  }
+  
 })
 
 
@@ -1678,45 +2379,66 @@ if(!is.null(input$categoricalInput) || !is.null(input$continuousInput)){
             newData3 = cbind.data.frame(pred.x, yhat)
 
             
-            #print(plotly::ggplotly(
-              sp = ggplot2::ggplot(newData, aes(x=xx, y=y)) +
-                   geom_line(data=newData3, aes(x=pred.x, y=yhat), lty = ltyest, color = colorLine) +   
-                   scale_x_continuous(breaks = xaxisval, labels = xaxislab)
-                      #))
-            
-    
-            if (resid){
-              sp = sp+geom_point(shape=1)
-            }
-            
-           if (se){
-              
-                sp = sp + geom_line(data=newData2, aes(x=pred.x, y=yup), lty = ltyci, color = colorLineCI) +
-                          geom_line(data=newData2, aes(x=pred.x, y=ylow), lty = ltyci, color = colorLineCI) 
-              
-            }
-            
-             ylabel =  paste0(input$ylabSchoenfeld, svar)
-    
-            sp2 = sp + xlab(input$xlabSchoenfeld) + ylab(ylabel) + ggtitle(input$mainPanelSchoenfeld) + theme_bw()
-            
-            
-            #xlab = "Time"
-            #ylab = paste0("Scaled Schoenfeld residuals for ", colnames(yy)[i])            
-            
-           #ply <- plotly::ggplotly(sp)
-           #print(ply)
            
-            #plotly::ggplotly(sp)
+           fn =  paste0("function() {\n if (this.value == ", xaxisval[1], ") {return ",xaxislab[1], "}\n  
+                    if (this.value == ", xaxisval[2], ") {return ",xaxislab[2], "}\n
+                    if (this.value == ", xaxisval[3], ") {return ",xaxislab[3], "}\n
+                    if (this.value == ", xaxisval[4], ") {return ",xaxislab[4], "}\n
+                    if (this.value == ", xaxisval[5], ") {return ",xaxislab[5], "}\n
+                    if (this.value == ", xaxisval[6], ") {return ",xaxislab[6], "}\n
+                    if (this.value == ", xaxisval[7], ") {return ",xaxislab[7], "}\n
+                    if (this.value == ", xaxisval[8], ") {return ",xaxislab[8], "}\n
+                   ", "}"
+                  )
+            
+      
+         ylabel =  paste0(input$ylabSchoenfeld, svar)
+  
+         if(input$changeThemeSchoenfeld == "theme0"){
+
+              sp = highchart() %>% 
+                hc_add_series(name = "Curve", data = as.matrix(newData3), type = "line",  enabled = FALSE, color = input$curveColSchoenfeld, marker = list(enabled = FALSE), id = "schoenLine")%>%
+                hc_xAxis(tickInterval=NULL, tickLength = 5, lineWidth = 1, tickPositions = xaxisval, labels = list(formatter = JS(fn), format = "{value:.2f}"), title = list(text = input$xlabSchoenfeld))%>%
+                hc_yAxis(tickInterval=NULL, tickLength = 5, lineWidth = 1, title = list(text = ylabel), labels = list(format = "{value:.2f}"))%>% 
+                hc_title(text = input$mainPanelSchoenfeld) %>%
+                hc_plotOptions(line = list(dashStyle = input$ltySchoenfeld)) %>%
+                hc_chart(backgroundColor = input$backgroundSchoenfeld, zoomType = "xy") %>%
+                hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 2, followTouchMove = FALSE)
+
+          }else{
+
+              sp = highchart() %>% 
+                hc_add_series(name = "Curve", data = as.matrix(newData3), type = "line",  enabled = FALSE, color = input$curveColSchoenfeld, marker = list(enabled = FALSE), id = "schoenLine")%>%
+                hc_xAxis(tickInterval=NULL, tickLength = 5, lineWidth = 1, tickPositions = xaxisval, labels = list(formatter = JS(fn), format = "{value:.2f}"), title = list(text = input$xlabSchoenfeld))%>%
+                hc_yAxis(tickInterval=NULL, tickLength = 5, lineWidth = 1, title = list(text = ylabel), labels = list(format = "{value:.2f}"))%>% 
+                hc_title(text = input$mainPanelSchoenfeld) %>%
+                hc_add_theme(themeSchoenfeld()) %>%
+                hc_plotOptions(line = list(dashStyle = input$ltySchoenfeld)) %>%
+                hc_chart(backgroundColor = input$backgroundSchoenfeld, zoomType = "xy") %>%
+                hc_tooltip(shared = TRUE, crosshairs = FALSE, valueDecimals = 2, followTouchMove = FALSE)
+
+          }
               
+              if (resid){
+                sp = sp %>%  hc_add_series(name = "Residuals", data = as.matrix(newData), type="scatter",  labels = list(format = "{value:.2f}"), color = input$colSchoenfeldResiduals, zIndex = 10, marker = list(symbol = "circle", radius = 4))
+              }
+              
+              if (se){
+                
+                sp = sp %>% hc_add_series(name = "CI", data = as.matrix(cbind(newData2$pred.x, newData2$ylow, newData2$yup)),
+                                     type = "arearange", fillOpacity = input$alphaSchoenfeld, showInLegend = FALSE, linkedTo = "schoenLine", color = input$colSchoenfeldCI)
+                
+              }
+              
+              sp = sp %>% hc_exporting(enabled = TRUE, filename = "schoenfeldplot") 
           }
     
-    }else{
+        }else{
 
-        sp2 = NULL      
-    } 
+            sp = NULL      
+        } 
 
-    return(sp2)   #schoenfeldPlotReactive()
+    return(sp)   #schoenfeldPlotReactive()
 })
 
 
@@ -1781,9 +2503,18 @@ if(!is.null(input$categoricalInput) || !is.null(input$continuousInput)){
 
         compareCurves <- survfit(Surv(time, statusVar == TRUE) ~ factors, data = newData)
 
+
+
+        for(i in 1:length(names(compareCurves$strata))) {
+          
+            names(compareCurves$strata)[i] = gsub("factors", fctr, names(compareCurves$strata)[i])
+          
+        }
+
+
     }
 
-      compareCurves$surv = log(-log(compareCurves$surv))
+     # compareCurves$surv = log(-log(compareCurves$surv))
 
 
 
@@ -1799,108 +2530,174 @@ if(!is.null(input$categoricalInput) || !is.null(input$continuousInput)){
   })
 
 
+themeSchoenfeldLml <- reactive({
+  
+  if(input$changeThemeSchoenfeldLml == "theme1"){
+    
+    hc_theme_538()
+    
+  }
+  
+  else if(input$changeThemeSchoenfeldLml == "theme2"){
+    
+    hc_theme_economist()
+    
+  }
+  else if(input$changeThemeSchoenfeldLml == "theme3"){
+    
+    hc_theme_ft()
+    
+  }
+  
+  else if(input$changeThemeSchoenfeldLml == "theme4"){
+    
+    hc_theme_db()
+    
+  }
+  else if(input$changeThemeSchoenfeldLml == "theme5"){
+    
+    hc_theme_flat()
+    
+  }
+  else if(input$changeThemeSchoenfeldLml == "theme6"){
+    
+    hc_theme_flatdark()
+    
+  }
+  
+  else if(input$changeThemeSchoenfeldLml == "theme7"){
+    
+    hc_theme_smpl()
+    
+  }
+  else if(input$changeThemeSchoenfeldLml == "theme8"){
+    
+    hc_theme_elementary()
+    
+  }
+  else if(input$changeThemeSchoenfeldLml == "theme9"){
+    
+    hc_theme_google()
+    
+  }
+  
+  else if(input$changeThemeSchoenfeldLml == "theme10"){
+    
+    hc_theme_gridlight()
+    
+  }
+  else if(input$changeThemeSchoenfeldLml == "theme11"){
+    
+    hc_theme_sandsignika()
+    
+  }
+  
+  
+  
+  
+  
+})
+
+
+selectBackgroundColorSchoenfeldLml <- reactive({
+  
+  if(input$changeThemeSchoenfeldLml == "theme0" || input$changeThemeSchoenfeldLml == "theme7" || input$changeThemeSchoenfeldLml == "theme8" || input$changeThemeSchoenfeldLml == "theme9" || input$changeThemeSchoenfeldLml == "theme10" || input$changeThemeSchoenfeldLml == "theme11"){
+    
+    "#FFFFFF"
+    
+  }else{
+    
+    
+    themeSchoenfeldLml()$chart$backgroundColor
+  }
+  
+})
+
+
+
+observe({
+  
+  shinyjs::updateColourInput(session, "backgroundSchoenfeldLml", value = selectBackgroundColorSchoenfeldLml())
+  
+})
+
+
 kmPlotCoxReactive <- reactive({
 
 
-    if(!is.null(kmCurvesCoxReactive())){
+ #if(!is.null(kmCurvesCoxReactive())){
 
-        s = kmCurvesCoxReactive()
-            #scale_x_continuous(breaks=seq(min(compareCurves$time), max(compareCurves$time), by=round((max(compareCurves$time)-min(compareCurves$time))/10,0)))+
-            #scale_y_continuous(breaks=seq(min(compareCurves$surv), max(compareCurves$surv), by=((max(compareCurves$surv)-min(compareCurves$surv))/10)))
+      #p <-  hchart(kmCurvesCoxReactive(), fun = "cloglog") %>% 
 
+
+      is.even <- function(x) x %% 2 == 0
+      
+      ranges = input$addCILmlSchoenfeld
+      
+      p = hchart(kmCurvesCoxReactive(), fun = "cloglog", ranges = ranges, type = "line", animation = TRUE, rangesOpacity = input$alphaLmlSchoenfeld)
+      
+      
+      if(ranges){
+          
+          for(i in 1:length(p$x$hc_opts$series)){
             
-        cens.col = input$censColKMph
-        lty.est = input$ltyKMph
-        cens.shape = input$censShapeKMph
-        back.white = input$themeKmCox
-        xlab = input$xlabKMph
-        ylab = input$ylabKMph
-        main = input$mainPanelKMph
-        surv.col = 'gg.def'
-        CI = 'def'
-
-
-        strata <- ifelse(is.null(s$strata) ==T, 1, length(s$strata))
-        stopifnot(length(surv.col) == 1 | length(surv.col) == strata)
-        stopifnot(length(lty.est) == 1 | length(lty.est) == strata)
-
-
-        n <- s$strata
-
-        groups <- factor(unlist(strsplit(names
-                                         (s$strata), '='))[seq(2, 2*strata, by = 2)])
-        gr.name <-  unlist(strsplit(names(s$strata), '='))[1]
-        gr.df <- vector('list', strata)
-        ind <- vector('list', strata)
-        n.ind <- c(0,n); n.ind <- cumsum(n.ind)
-        for(i in 1:strata) ind[[i]] <- (n.ind[i]+1):n.ind[i+1]
-
-        for(i in 1:strata){
-          gr.df[[i]] <- data.frame(
-            time = c(s$time[ind[[i]]]),
-            surv = c(s$surv[ind[[i]]]),
-            up = c(s$upper[ind[[i]]]),
-            low = c(s$lower[ind[[i]] ]),
-            cens = c(s$n.censor[ind[[i]]]),
-            group = rep(groups[i],n[i]))
+            if(is.even(i)){
+              p$x$hc_opts$series[[i]]$name = "CI (95%)"
+          
         }
-
-        dat <- do.call(rbind, gr.df)
-        dat.cens <- subset(dat, cens != 0)
-
-        pl <- ggplot(dat, aes(x = time, y = surv, group = group)) +
-          xlab(xlab) + ylab(ylab) + ggtitle(main) +
-          geom_step(aes(col = group, lty = group))
-
-        col <- if(length(surv.col == 1)){
-          scale_colour_manual(name = gr.name, values = rep(surv.col, strata))
-        } else{
-          scale_colour_manual(name = gr.name, values = surv.col)
-        }
-
-        pl <- if(surv.col[1] != 'gg.def'){
-          pl + col
-        } else {pl + scale_colour_discrete(name = gr.name)}
-
-        line <- if(length(lty.est) == 1){
-          scale_linetype_manual(name = gr.name, values = rep(lty.est, strata))
-        } else {scale_linetype_manual(name = gr.name, values = lty.est)}
-
-        pl <- pl + line
-
-        pl <- if(CI == T) {
-          if(length(surv.col) > 1 && length(lty.est) > 1){
-            stop('Either surv.col or lty.est should be of length 1 in order
-                 to plot 95% CI with multiple strata')
-          }else if((length(surv.col) > 1 | surv.col == 'gg.def')[1]){
-            pl + geom_step(aes(y = up, color = group), lty = lty.ci) +
-              geom_step(aes(y = low, color = group), lty = lty.ci)
-          } else{pl +  geom_step(aes(y = up, lty = group), col = surv.col) +
-              geom_step(aes(y = low,lty = group), col = surv.col)}
-        } else {pl}
-
-
-        #pl <- if(plot.cens == T & length(dat.cens) > 0){
-        #  pl + geom_point(data = dat.cens, aes(y = surv), shape = cens.shape,
-        #                  col = cens.col)
-        #} else if (plot.cens == T & length(dat.cens) == 0){
-        #  stop ('There are no censored observations')
-        #} else(pl)
-
-        pl <- if(back.white == T) {pl + theme_bw()
-        } else (pl)
-        pl
-
-              plotly::ggplotly(pl)
-            }
-
-        })
+        
+      }
+    
+  }
+  
+  if(input$changeThemeSchoenfeldLml == "theme0"){
+    
+    p2 = p %>% hc_exporting(enabled = TRUE, filename = "plot") %>% 
+      hc_title(text = input$mainPanelLmlSchoenfeld) %>%  
+      hc_xAxis(title = list(text = input$xlabLmlSchoenfeld), tickInterval=NULL, tickLength = 5, lineWidth = 1)  %>%  
+      hc_yAxis(title = list(text = input$ylabLmlSchoenfeld), lineWidth = 1, tickLength = 5, tickWidth= 1, labels = list(format = "{value:.2f}")) %>% 
+      #hc_colors("#440154") %>%
+      hc_chart(backgroundColor = input$backgroundSchoenfeldLml, zoomType = "xy") %>% 
+      hc_legend(enabled = TRUE) %>% 
+      hc_plotOptions(line = list(dashStyle = input$ltyLmlSchoenfeld), area = list(zIndex = 15), series = list(enableMouseTracking = TRUE)) %>% 
+      hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 3, followTouchMove = FALSE, headerFormat = "<b>Time</b>: {point.key} <br>")#, pointFormat = "{series.name}: {point.y}")
+    
+    
+  }else{
+    
+    p2 = p %>% hc_exporting(enabled = TRUE, filename = "plot") %>% 
+      hc_title(text = input$mainPanelLmlSchoenfeld) %>%  
+      hc_xAxis(title = list(text = input$xlabLmlSchoenfeld), tickInterval=NULL, tickLength = 5, lineWidth = 1)  %>%  
+      hc_yAxis(title = list(text = input$ylabLmlSchoenfeld), lineWidth = 1, tickLength = 5, tickWidth= 1, labels = list(format = "{value:.2f}")) %>% 
+      #hc_colors("#440154") %>%
+      hc_add_theme(themeSchoenfeldLml()) %>%
+      hc_chart(backgroundColor = input$backgroundSchoenfeldLml, zoomType = "xy") %>% 
+      hc_legend(enabled = TRUE) %>% 
+      hc_plotOptions(line = list(dashStyle = input$ltyLmlSchoenfeld), area = list(zIndex = 15), series = list(enableMouseTracking = TRUE)) %>% 
+      hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 3, followTouchMove = FALSE, headerFormat = "<b>Time</b>: {point.key} <br>")#, pointFormat = "{series.name}: {point.y}")
+  }
+  p2
+  
 
 
-         output$phPlots <- plotly::renderPlotly({
+
+
+      
+
+
+
+
+
+ 
+      #  }
+
+      })
+
+
+         output$phPlots <- renderHighchart({
 
                 if(input$selectPlotCox == 1 && input$runCox){
-                    plotly::ggplotly(schoenfeldPlot())
+                    schoenfeldPlot()
                 }
 
                 else if(input$selectPlotCox == 2 && input$runCox){
@@ -1916,8 +2713,282 @@ kmPlotCoxReactive <- reactive({
           })
 
 
+##############################################################################################
+#################### Random Survival Forest (start) ##########################################
+##############################################################################################
+
+randomForestSurvival <- reactive({
+  
+  
+      survivalTime = input$survivalTimeRF
+      categoricalInput =input$categoricalInputRF
+      continuousInput = input$continuousInputRF 
+      statusVariable = input$statusVariableRF 
+      status = input$statusRF
+      addInteractions = input$addInteractionsRF
+      twoWayinteractions = input$twoWayInteractionsRF
+      threeWayinteractions = input$threeWayInteractionsRF
+      customInteractions = input$customInteractionsRF
+      selectCustomInteractionTerms = input$selectCustomInteractionsRF
+      timeDependetCovariate = input$addTimeDependentCovariatesRF
+      timeDependentVariableTransformation = input$timeDepTransformRF
+      selectTimeDependentCovariate = input$selectTimeDependentVariablesRF
+      strata = input$addStrataRF
+      strataVariable = input$selectStrataVariableRF
+      referenceCategory = input$refCategoryRF
+      multipleID = input$multipleIDRF
+      
+      
+      #if(input$runKM){
+      data = dataM()
+      
+      
+      if(!is.null(survivalTime)){
+        survivalTime = as.matrix(data[, survivalTime, drop = FALSE])
+        survivalTime = apply(survivalTime, 2, as.numeric)
+      }
+      
+      if(!is.null(categoricalInput)){
+        categoricalInput = as.data.frame(data[, categoricalInput, drop = FALSE])
+        categoricalInput = apply(categoricalInput, 2, as.factor)
+        categoricalInput = as.data.frame(categoricalInput)
+        
+        
+      }
+      
+      if(!is.null(continuousInput)){
+        continuousInput = as.data.frame(data[, continuousInput, drop = FALSE])
+        continuousInput = apply(continuousInput, 2, as.numeric)
+        continuousInput = as.data.frame(continuousInput)
+      }
+      
+      if(!is.null(statusVariable)){
+        statusVariable = as.factor(data[, statusVariable])
+        
+        
+      }
+      
+      if(!is.null(status)){
+        if(is.numeric(status)){status = as.factor(status)}else{status = as.factor(status)}
+        
+      }
+      
+      if(!is.null(categoricalInput) && !is.null(continuousInput)){
+        newData = data.frame(id2 =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime[,1], 
+                             statusVar=statusVariable, categoricalInput, continuousInput)
+        newData = newData[complete.cases(newData),]
+        
+      }else if(!is.null(categoricalInput) && is.null(continuousInput)){
+        newData = data.frame(id2 =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime[,1], 
+                             statusVar=statusVariable, categoricalInput)
+        newData = newData[complete.cases(newData),]
+        
+      }else if(is.null(categoricalInput) && !is.null(continuousInput)){
+        newData = data.frame(id2 =seq(1,dim(survivalTime)[1], 1), survivalTime = survivalTime[,1], 
+                             statusVar=statusVariable, continuousInput)
+        newData = newData[complete.cases(newData),]
+        
+      }
+      
+      
+      
+      
+      if(referenceCategory != "first"){
+        for(l in 1:dim(categoricalInput)[2]){
+          newData[, names(categoricalInput)[l]] <- relevel(categoricalInput[,l], ref = levels(categoricalInput[,l])[length(levels(categoricalInput[,l]))])
+        }
+      }
+      
+      
+      if(addInteractions){
+        
+        if(!is.null(categoricalInput) || !is.null(continuousInput)){
+          
+          fNames <- names(c(categoricalInput, continuousInput))
+          
+        }  
+        
+        if(twoWayinteractions && length(fNames) >1){
+          
+          twoWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 2)), paste, collapse = ":"))
+          names(twoWayInteractionTerms) <- NULL
+          
+        }else{twoWayInteractionTerms = NULL}
+        
+        if(threeWayinteractions && length(fNames) >2){
+          
+          threeWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 3)), paste, collapse = ":"))
+          names(threeWayInteractionTerms) <- NULL
+          
+        }else{threeWayInteractionTerms = NULL}  
+        
+        #if(customInteractions && length(fNames) >2){
+        
+        #   ctwoWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 2)), paste, collapse = ":"))
+        #   names(twoWayInteractionTerms) <- NULL
+        
+        #   cthreeWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 3)), paste, collapse = ":"))
+        #  names(threeWayInteractionTerms) <- NULL
+        
+        
+        #  customInteractionTerms = c(ctwoWayInteractionTerms, cthreeWayInteractionTerms)
+        # names(customInteractionTerms) = NULL
+        
+        
+        
+        #}else{customInteractionTerms = NULL}
+        
+        if(customInteractions){
+          
+          interactions = selectCustomInteractionTerms
+          
+        }else{
+          
+          interactions = c(twoWayInteractionTerms, threeWayInteractionTerms)
+          
+        } 
+        
+      }else{
+        interactions = NULL
+        customInteractionTerms= NULL
+      }
+      
+      
+      if(strata){
+        
+        strataVar = strataVariable
+        newData = cbind.data.frame(newData, data[, strataVar])
+        names(newData)[dim(newData)[2]] = strataVar
+        
+      }
+      
+      
+      newData = cbind.data.frame(newData, data[colnames(data)[!(colnames(data) %in% colnames(newData))]])
+      
+      # if(multipleID != TRUE){  
+      #   newData$statusVar = newData$statusVar%in%status
+      #   
+      #   newData$id <- 1:nrow(newData)
+      #   cut.points <- unique(newData$survivalTime[newData$statusVar == TRUE])
+      #   newData <- survSplit(formula = Surv(survivalTime, statusVar)~., data = newData, cut = cut.points, end = "stop",
+      #                        start = "start", event = "statusVar")
+      # }
+      newData$statusVar = as.factor(newData$statusVar)%in%status
+      
+      if(timeDependetCovariate && !is.null(selectTimeDependentCovariate)){
+        
+        timeDependentCovariateNames = list()
+        for(i in 1:length(selectTimeDependentCovariate)){
+          
+          if(timeDependentVariableTransformation == "log"){
+            
+            newData = cbind.data.frame(newData, tmpNames = newData[,selectTimeDependentCovariate[i]]*log(newData[, "survivalTime"]))
+            
+          }else{
+            
+            newData = cbind.data.frame(newData, tmpNames = as.numeric(newData[,selectTimeDependentCovariate[i]])*newData[, "survivalTime"])
+            
+          }
+          
+          names(newData)[dim(newData)[2]] = timeDependentCovariateNames[[i]] = paste0("time_", selectTimeDependentCovariate[i])
+          
+        }
+        
+        timeDependentNames = unlist(timeDependentCovariateNames)    
+        
+      }
+      
+      # if(multipleID){  
+      #   names(newData)[which(names(newData) == "start")] = "start2"
+      #   
+      #   newData <- newData %>%
+      #     group_by(id) %>%
+      #     mutate(start = 0:(n() - 1))
+      #   
+      #   newData = as.data.frame(newData)
+      #   
+      #   ind = row.names(newData[newData$start !=0,])
+      #   
+      #   newData$start[as.numeric(ind)] =  newData$survivalTime[as.numeric(ind)-1]
+      # }
+      
+      if(!is.null(categoricalInput) || !is.null(continuousInput)){
+        
+        predictors = paste0(names(c(categoricalInput, continuousInput)), collapse = "+")
+        
+        if(!is.null(interactions)){
+          
+          
+          if(length(interactions) > 1){
+            interactions2 = paste(interactions, collapse = "+")
+            predictors2 = paste(predictors, interactions2, sep = "+", collapse = "+")
+          }    
+          
+          if(length(interactions) == 1){
+            predictors2 = paste(predictors, interactions, sep = "+")
+          }
+          predictors = predictors2
+        }
+        
+        if(timeDependetCovariate && !is.null(selectTimeDependentCovariate)){
+          
+          
+          if(length(timeDependentNames) > 1){
+            timeDependents = paste(timeDependentNames, collapse = "+")
+          }else{
+            
+            timeDependents =  timeDependentNames
+          }
+          predictors = paste(predictors, timeDependents, sep = "+", collapse = "+")
+        }
+        
+        if(strata && !is.null(strataVariable)){
+          
+          strataVars = paste0("strata(",strataVar,")")
+          predictors = paste(predictors, strataVars, sep = "+", collapse = "+")
+          
+        } 
+        
+      }else{predictors = 1}
+      
+      formula = as.formula(paste0("Surv(survivalTime, statusVar ==  TRUE) ~ ", predictors))
+      
+      
+      
+      rf = rfsrc(formula = formula, data = newData, ntree = 100, bootstarp = "by.root", tree.err=TRUE, 
+                     importance = TRUE, membership = TRUE, statistics = TRUE, do.trace = TRUE,
+                     mtry = NULL, nodesize = NULL, nodedepth = NULL, splitrule = NULL, nsplit = 0,
+                     split.null = FALSE, na.action = "na.omit", nimpute = 1, proximity = FALSE, sampsize = NULL,
+                     samptype = "swr", case.wt = NULL, xvar.wt = NULL, forest = TRUE, var.used = FALSE, 
+                     split.depth = FALSE, seed = 1234, coerce.factor = NULL)
+      
+      
+      attr(rf, "class") = "list"
+      return(rf)  
+})
 
 
+output$rf <- renderPrint({
+
+      randomForestSurvival()
+  })
+
+
+ output$individualSurvivalPredictions <- DT::renderDataTable({
+
+    preds = randomForestSurvival()$survival
+    colnames(preds) = randomForestSurvival()$time.interest
+  
+      datatable(t(preds), extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+      dom = 'Bfrtip',
+      buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+      ))
+
+ })
+ 
+##############################################################################################
+#################### Random Survival Forest (end) ############################################
+##############################################################################################
 
  
 })
