@@ -193,7 +193,7 @@ library("randomForestSRC")
  observe({
      data_tmp <- dataM()
      if (!is.null(data_tmp)){
-         updateSelectizeInput(session = session, inputId = "statusVariableCox", choices = colnames(data_tmp), selected = colnames(data_tmp)[2])
+         updateSelectizeInput(session = session, inputId = "statusVariableCox", choices = colnames(data_tmp), selected = colnames(data_tmp)[4])
      } else {
          updateSelectizeInput(session = session, inputId = "statusVariableCox", choices = "", selected = "")
      }
@@ -217,11 +217,11 @@ library("randomForestSRC")
 #############################################################
 
 observe({
-    updateSelectizeInput(session, "categoricalInput", choices = colnames(dataM()), selected = colnames(dataM())[6])
+    updateSelectizeInput(session, "categoricalInput", choices = colnames(dataM()), selected = colnames(dataM())[3])
 })
 
 observe({
-    updateSelectizeInput(session, "continuousInput", choices = colnames(dataM()), selected = colnames(dataM())[4])
+    updateSelectizeInput(session, "continuousInput", choices = colnames(dataM()), selected = colnames(dataM())[2])
 })
 
 observe({
@@ -293,7 +293,7 @@ observe({
  observe({
      data_tmp <- dataM()
      if (!is.null(data_tmp)){
-         updateSelectizeInput(session = session, inputId = "statusVariableRF", choices = colnames(data_tmp), selected = colnames(data_tmp)[2])
+         updateSelectizeInput(session = session, inputId = "statusVariableRF", choices = colnames(data_tmp), selected = colnames(data_tmp)[4])
      } else {
          updateSelectizeInput(session = session, inputId = "statusVariableRF", choices = "", selected = "")
      }
@@ -317,11 +317,11 @@ observe({
 #############################################################
 
 observe({
-    updateSelectizeInput(session, "categoricalInputRF", choices = colnames(dataM()), selected = colnames(dataM())[6])
+    updateSelectizeInput(session, "categoricalInputRF", choices = colnames(dataM()), selected = colnames(dataM())[3])
 })
 
 observe({
-    updateSelectizeInput(session, "continuousInputRF", choices = colnames(dataM()), selected = colnames(dataM())[4])
+    updateSelectizeInput(session, "continuousInputRF", choices = colnames(dataM()), selected = colnames(dataM())[2])
 })
 
 observe({
@@ -2949,17 +2949,15 @@ randomForestSurvival <- reactive({
           
         } 
         
-      }else{predictors = 1}
+        }else{predictors = 1}
       
-      formula = as.formula(paste0("Surv(survivalTime, statusVar ==  TRUE) ~ ", predictors))
-      
-      
-      
-      rf = rfsrc(formula = formula, data = newData, ntree = 100, bootstarp = "by.root", tree.err=TRUE, 
+        formula = as.formula(paste0("Surv(survivalTime, statusVar ==  TRUE) ~ ", predictors))
+            
+        rf = rfsrc(formula = formula, data = newData, ntree = input$ntree, bootstrap = input$bootstrap, tree.err=TRUE, 
                      importance = TRUE, membership = TRUE, statistics = TRUE, do.trace = TRUE,
-                     mtry = NULL, nodesize = NULL, nodedepth = NULL, splitrule = NULL, nsplit = 0,
-                     split.null = FALSE, na.action = "na.omit", nimpute = 1, proximity = FALSE, sampsize = NULL,
-                     samptype = "swr", case.wt = NULL, xvar.wt = NULL, forest = TRUE, var.used = FALSE, 
+                     mtry = input$mtry, nodesize = input$nodesize, nodedepth = input$nodedepth, splitrule = input$splitrule, nsplit = input$nsplit,
+                     split.null = FALSE, na.action = input$naAction, nimpute = input$nimpute, proximity = input$proximity, sampsize = NULL,
+                     samptype = input$samptype, case.wt = NULL, xvar.wt = NULL, forest = TRUE, var.used = FALSE, 
                      split.depth = FALSE, seed = 1234, coerce.factor = NULL)
       
       
@@ -2970,21 +2968,449 @@ randomForestSurvival <- reactive({
 
 output$rf <- renderPrint({
 
-      randomForestSurvival()
+randomForestSurvival()
+
+
   })
 
 
- output$individualSurvivalPredictions <- DT::renderDataTable({
+ output$survival <- DT::renderDataTable({
 
-    preds = randomForestSurvival()$survival
-    colnames(preds) = randomForestSurvival()$time.interest
+
+if(input$survivalResultRF){
+    survival = data.frame(randomForestSurvival()$survival)
+
+    survival = apply(survival, 2, FUN = function(x){
   
-      datatable(t(preds), extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+          as.numeric(formatC(x, digits = 3))
+  
+    })
+
+    survival = as.data.frame(survival)
+    colnames(survival) = as.character(randomForestSurvival()$time.interest)
+  
+
+
+      datatable(survival, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
       dom = 'Bfrtip',
       buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
       ))
 
+      }
+
  })
+
+
+ output$survivalOOB <- DT::renderDataTable({
+
+  if(input$survivalResultOobRF){
+
+
+    survivalOOB = data.frame(randomForestSurvival()$survival.oob)
+
+    survivalOOB = apply(survivalOOB, 2, FUN = function(x){
+  
+          as.numeric(formatC(x, digits = 3))
+  
+    })
+
+    survivalOOB = as.data.frame(survivalOOB)
+    colnames(survivalOOB) = as.character(randomForestSurvival()$time.interest)
+  
+
+
+      datatable(survivalOOB, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+      dom = 'Bfrtip',
+      buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+      ))
+    }
+ })
+
+
+  output$errorRate <- DT::renderDataTable({
+
+    if(input$errorRateRF){
+
+        errorRates = data.frame(randomForestSurvival()$err.rate)
+
+        errorRates = apply(errorRates, 2, FUN = function(x){
+      
+              as.numeric(formatC(x, digits = 3))
+          }
+        )
+
+        errorRates = data.frame(1:length(errorRates), errorRates)
+
+        colnames(errorRates) = c("Number of tree", "Error rate")
+
+          datatable(errorRates, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+          dom = 'Bfrtip',
+          buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+          ))
+   }   
+ })
+
+
+ output$chf <- DT::renderDataTable({
+
+  if(input$chRF){
+
+    chfRes = data.frame(randomForestSurvival()$chf)
+
+    chfRes = apply(chfRes, 2, FUN = function(x){
+  
+          as.numeric(formatC(x, digits = 3))
+  
+    })
+
+    chfRes = as.data.frame(chfRes)
+    colnames(chfRes) = as.character(randomForestSurvival()$time.interest)
+  
+
+
+      datatable(chfRes, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+      dom = 'Bfrtip',
+      buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+      ))
+    }
+ })
+
+
+ output$chfOOB <- DT::renderDataTable({
+
+    if(input$chOobRF){
+
+      chfOOBres = data.frame(randomForestSurvival()$chf.oob)
+
+      chfOOBres = apply(chfOOBres, 2, FUN = function(x){
+    
+            as.numeric(formatC(x, digits = 3))
+    
+      })
+
+      chfOOBres = as.data.frame(chfOOBres)
+      colnames(chfOOBres) = as.character(randomForestSurvival()$time.interest)
+    
+
+
+        datatable(chfOOBres, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+        dom = 'Bfrtip',
+        buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+        ))
+
+      }
+
+ })
+
+
+  output$variableImportance <- DT::renderDataTable({
+
+    if(input$varImp){
+
+      variableImp = data.frame(t(randomForestSurvival()$importance))
+
+      variableImp = apply(variableImp, 2, FUN = function(x){
+    
+            as.numeric(formatC(x, digits = 3))
+    
+      })
+
+      variableImp = as.data.frame(variableImp)
+
+        datatable(variableImp, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+        dom = 'Bfrtip',
+        buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+        ))
+
+      }
+
+ })
+
+
+ observe({
+       updateSelectInput(session, "customSelect", choices = c(1:nrow(dataM())))
+   })
+
+  observe({
+       updateSelectInput(session, "customSelectOOB", choices = c(1:nrow(dataM())))
+   })
+
+  observe({
+       updateSelectInput(session, "customSelectHazard", choices = c(1:nrow(dataM())))
+   })
+
+    observe({
+       updateSelectInput(session, "customSelectHazardOOB", choices = c(1:nrow(dataM())))
+   })
+
+
+ output$rsfPlot <- renderHighchart({
+          
+    if(input$createRSFplot){        
+        
+        if(input$selectRFPlot == 1){
+
+              surv = data.frame(t(randomForestSurvival()$survival))
+
+              survList = list()
+              
+              for(i in 1:ncol(surv)){
+                
+                survList[[i]] = list(data = as.matrix(cbind(randomForestSurvival()$time.interest, surv[,i])), name = paste0("Survival (obs", i, ")"), type = "line")
+                
+              }
+              names(survList) = NULL
+              
+              if(input$selectObs == 1){
+                  indx = 1:ncol(surv)
+              }
+
+              if(input$selectObs == 2){
+
+                indx = c(input$fromRSF:input$toRSF)
+
+               }     
+
+              if(input$selectObs == 3){
+
+                  indx = c(as.numeric(input$customSelect))
+
+               }     
+
+              survList =  survList[indx]
+
+              legend = if(input$selectObs == 1){FALSE}else{TRUE}
+
+              highchart() %>% hc_exporting(enabled = TRUE, filename = "survivalRFPlot") %>% 
+                hc_add_series_list(lst =survList) %>%
+                hc_chart(zoomType = "xy", inverted = FALSE) %>%
+                hc_xAxis(categories = NULL, title = list(text = "Time")) %>%
+                hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Survival"))%>%
+                hc_legend(enabled = legend) %>%
+                hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+                hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
+                               errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+                hc_add_theme(hc_theme_google())
+
+                
+
+          }
+
+
+
+          else if(input$selectRFPlot == 2){
+
+              survOob = data.frame(t(randomForestSurvival()$survival.oob))
+
+              survListOob = list()
+              
+              for(i in 1:ncol(survOob)){
+                
+                survListOob[[i]] = list(data = as.matrix(cbind(randomForestSurvival()$time.interest, survOob[,i])), name = paste0("Survival (obs", i, ")"), type = "line")
+                
+              }
+              names(survListOob) = NULL
+              
+              if(input$selectObsSurvOOB == 1){
+                  indx = 1:ncol(survOob)
+              }
+
+              if(input$selectObsSurvOOB == 2){
+
+                indx = c(input$fromRSFOOB:input$toRSFOOB)
+
+               }     
+
+              if(input$selectObsSurvOOB == 3){
+
+                  indx = c(as.numeric(input$customSelectHazard))
+
+               }     
+
+              survListOob =  survListOob[indx]
+
+              legend = if(input$selectObsSurvOOB == 1){FALSE}else{TRUE}
+
+              highchart() %>% hc_exporting(enabled = TRUE, filename = "survivalRFOOBPlot") %>% 
+                hc_add_series_list(lst =survListOob) %>%
+                hc_chart(zoomType = "xy", inverted = FALSE) %>%
+                hc_xAxis(categories = NULL, title = list(text = "Time")) %>%
+                hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Survival OOB"))%>%
+                hc_legend(enabled = legend) %>%
+                hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+                hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
+                               errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+                hc_add_theme(hc_theme_google())
+
+                
+
+          }
+
+
+          else if(input$selectRFPlot == 3){
+
+              hazardRF = data.frame(t(randomForestSurvival()$chf))
+
+              hazardList = list()
+              
+              for(i in 1:ncol(hazardRF)){
+                
+                hazardList[[i]] = list(data = as.matrix(cbind(randomForestSurvival()$time.interest, hazardRF[,i])), name = paste0("Survival (obs", i, ")"), type = "line")
+                
+              }
+              names(hazardList) = NULL
+              
+              if(input$selectObsHazard == 1){
+                  indx = 1:ncol(hazardRF)
+              }
+
+              if(input$selectObsHazard == 2){
+
+                indx = c(input$fromHazard:input$toHazard)
+
+               }     
+
+              if(input$selectObsHazard == 3){
+
+                  indx = c(as.numeric(input$customSelectHazard))
+
+               }     
+
+              hazardList =  hazardList[indx]
+
+              legend = if(input$selectObsHazard == 1){FALSE}else{TRUE}
+
+              highchart() %>% hc_exporting(enabled = TRUE, filename = "survivalRFPlot") %>% 
+                hc_add_series_list(lst =hazardList) %>%
+                hc_chart(zoomType = "xy", inverted = FALSE) %>%
+                hc_xAxis(categories = NULL, title = list(text = "Time")) %>%
+                hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Survival"))%>%
+                hc_legend(enabled = legend) %>%
+                hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+                hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
+                               errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+                hc_add_theme(hc_theme_google())
+
+                
+
+          }
+
+
+          else if(input$selectRFPlot == 4){
+
+              hazardRFOOB = data.frame(t(randomForestSurvival()$chf.oob))
+
+              hazardListOOB = list()
+              
+              for(i in 1:ncol(hazardRFOOB)){
+                
+                hazardListOOB[[i]] = list(data = as.matrix(cbind(randomForestSurvival()$time.interest, hazardRFOOB[,i])), name = paste0("Survival (obs", i, ")"), type = "line")
+                
+              }
+              names(hazardListOOB) = NULL
+              
+              if(input$selectObsHazardOOB == 1){
+                  indx = 1:ncol(hazardRFOOB)
+              }
+
+              if(input$selectObsHazardOOB == 2){
+
+                indx = c(input$fromHazardOOB:input$toHazardOOB)
+
+               }     
+
+              if(input$selectObsHazardOOB == 3){
+
+                  indx = c(as.numeric(input$customSelectHazardOOB))
+
+               }     
+
+              hazardListOOB =  hazardListOOB[indx]
+
+              legend = if(input$selectObsHazardOOB == 1){FALSE}else{TRUE}
+
+              highchart() %>% hc_exporting(enabled = TRUE, filename = "survivalRFPlot") %>% 
+                hc_add_series_list(lst =hazardListOOB) %>%
+                hc_chart(zoomType = "xy", inverted = FALSE) %>%
+                hc_xAxis(categories = NULL, title = list(text = "Time")) %>%
+                hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Survival"))%>%
+                hc_legend(enabled = legend) %>%
+                hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+                hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
+                               errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+                hc_add_theme(hc_theme_google())
+
+                
+
+          }
+
+          else if(input$selectRFPlot == 4){
+
+              survOob = data.frame(t(randomForestSurvival()$survival.oob))
+
+              survListOob = list()
+              
+              for(i in 1:ncol(survOob)){
+                
+                survListOob[[i]] = list(data = as.matrix(cbind(randomForestSurvival()$time.interest, survOob[,i])), name = paste0("Survival (obs", i, ")"), type = "line")
+                
+              }
+              names(survListOob) = NULL
+              
+              if(input$selectObsSurvOOB == 1){
+                  indx = 1:ncol(survOob)
+              }
+
+              if(input$selectObsSurvOOB == 2){
+
+                indx = c(input$fromRSFOOB:input$toRSFOOB)
+
+               }     
+
+              if(input$selectObsSurvOOB == 3){
+
+                  indx = c(as.numeric(input$customSelectOOB))
+
+               }     
+
+              survListOob =  survListOob[indx]
+
+              legend = if(input$selectObsSurvOOB == 1){FALSE}else{TRUE}
+
+              highchart() %>% hc_exporting(enabled = TRUE, filename = "survivalRFOOBPlot") %>% 
+                hc_add_series_list(lst =survListOob) %>%
+                hc_chart(zoomType = "xy", inverted = FALSE) %>%
+                hc_xAxis(categories = NULL, title = list(text = "Time")) %>%
+                hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Survival OOB"))%>%
+                hc_legend(enabled = legend) %>%
+                hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+                hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
+                               errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+                hc_add_theme(hc_theme_google())
+
+                
+
+          }
+
+
+          else if(input$selectRFPlot == 5){
+
+              highchart() %>% hc_exporting(enabled = TRUE, filename = "errorPlot") %>% 
+              hc_add_series(data = randomForestSurvival()$err.rate, type = "line", name = "Error") %>%
+              hc_chart(zoomType = "xy", inverted = FALSE) %>%
+              hc_xAxis(categories = NULL, title = list(text = "Number of tree")) %>%
+              hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Error rate"))%>%
+              hc_legend(enabled = TRUE) %>%
+              hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Tree: </b>{point.x} <br>") %>%
+              hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
+                             errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+              hc_add_theme(hc_theme_google())
+
+          }
+
+        }
+
+})
  
 ##############################################################################################
 #################### Random Survival Forest (end) ############################################

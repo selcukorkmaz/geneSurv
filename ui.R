@@ -72,7 +72,7 @@ library("shinyBS")
       conditionalPanel(condition="input.tabs1=='Analysis'",
 
 
-          selectizeInput(inputId = "selectAnalysis", label = "Select a Method", choices = c("Life Table" = 1, "Kaplan-Meier" = 2, "Cox Regression" = 3, "Cox Regression with Lasso" = 4, "Random Survival Forests" = 5), selected = 2),
+          selectizeInput(inputId = "selectAnalysis", label = "Select a Method", choices = c("Life Table" = 1, "Kaplan-Meier" = 2, "Cox Regression" = 3, "Cox Regression with Lasso" = 4, "Random Survival Forests" = 5), selected = 5),
 
 
 
@@ -384,12 +384,24 @@ library("shinyBS")
                                                                     
                                                    ),
                                                    
-                                                   checkboxInput(inputId = "moreOptionsRF", label = "More options", value = FALSE),
+                                                   checkboxInput(inputId = "moreOptionsRF", label = "RSF options", value = FALSE),
                                                    
                                                    conditionalPanel(condition = "input.moreOptionsRF",
                                                                     
-                                                                    radioButtons("modelSelectionCriteriaRF", "Model selection criteria", choices = list("AIC" = "aic", "p value" = "pValue"), selected = "aic"),
-                                                                    
+                                                                    numericInput("ntree", "Number of tree", value = 100),
+                                                                    selectInput("bootstrap", "Bootstrap method", choices = list("Root" = "by.root", "Node" = "by.node"), selected = "by.root"),
+                                                                    numericInput("mtry", "Randomly selected number of variables", value = 5),
+                                                                    numericInput("nodesize", "Minimum number of cases in terminal node", value = 3),
+                                                                    numericInput("nodedepth", "Maximum depth for a tree", value = NULL),  
+                                                                    selectInput("splitrule", "Splitting rule", choices = list("Log-rank" = "logrank", "Log-rank score" = "logrankscore"), selected = "logrank"),
+                                                                    numericInput("nsplit", "Number of split", value = 1),  
+                                                                    selectInput("naAction", "Missing values", choices = list("Remove" = "na.omit", "Impute" = "na.impute"), selected = "na.omit"),
+                                                                    numericInput("nimpute", "Number of iterations of the missing data algorithm", value = 1),  
+                                                                    selectInput("proximity", "Proximity of cases", choices = list("Inbag" = "inbag", "OOB" = "oob", "All" = "all", "None" = FALSE), selected = "inbag"),
+                                                                    numericInput("sampsize", "Size of bootstrap", value = NA),
+                                                                    selectInput("samptype", "Type of bootstrap", choices = list("With replacement" = "swr", "Without replacement" = "swor"), selected = "swr"),
+
+
                                                                     conditionalPanel(condition = "input.modelSelectionCriteriaRF == 'pValue'",
                                                                                      
                                                                                      numericInput("alphaToEnterRF", "Alpha to enter", value = 0.05, min = 0, max = 1, step = 0.05),
@@ -397,9 +409,7 @@ library("shinyBS")
                                                                                      numericInput("alphaToRemoveRF", "Alpha to remove", value = 0.10, min = 0, max = 1, step = 0.05)
                                                                                      
                                                                     ),
-                                                                    
-                                                                    
-                                                                    
+                                                                
                                                                     selectizeInput("modelSelectionRF", "Model selection", choices = list("Enter" = "enter", "Backward" = "backward", "Forward" = "forward", "Stepwise" = "stepwise"), selected = "enter"),
                                                                     numericInput("confidenceLevelRF", "Confidence level", value = 95, min = 0, max = 100),
                                                                     radioButtons("refCategoryRF", "Reference category", choices = list("First" = "first", "Last" = "last")),
@@ -411,20 +421,13 @@ library("shinyBS")
                  checkboxInput(inputId = "outputsRF", label = tags$b("Outputs"), value = FALSE),
                  
                  conditionalPanel(condition = "input.outputsRF",
-                                  #   column(12, tags$style(type="text/css", '#leftPanel { width:250px; padding:-10px; float:left;}'),
-                                  
-                                  #checkboxInput(inputId = "displayDescriptives", label = "Descriptives", value = TRUE),
-                                  checkboxInput(inputId = "displayCoefficientEstimatesRF", label = "Coefficient estimates", value = TRUE),
-                                  #checkboxInput(inputId = "displayModelFit", label = "Model fit", value = TRUE),
-                                  checkboxInput(inputId = "hrRF", label = "Hazard ratio", value = TRUE),
-                                  checkboxInput(inputId = "goodnessOfFitTestsRF", label = "Goodness of fit tests", value = TRUE),
-                                  checkboxInput(inputId = "analysisOfDevianceRF", label = "Analysis of deviance", value = FALSE),
-                                  checkboxInput(inputId = "storePredictionsRF", label = "Predictions", value = FALSE),
-                                  checkboxInput(inputId = "residualsRF", label = "Residuals", value = FALSE),
-                                  checkboxInput(inputId = "martingaleResidualsRF", label = "Martingale residuals", value = FALSE),
-                                  checkboxInput(inputId = "schoenfeldResidualsRF", label = "Schoenfeld residuals", value = FALSE),
-                                  checkboxInput(inputId = "dfBetasRF", label = "DfBetas", value = FALSE)
-                                  #)
+                                  checkboxInput(inputId = "survivalResultRF", label = "Survival", value = TRUE),
+                                  checkboxInput(inputId = "survivalResultOobRF", label = "Survival OOB", value = TRUE),
+                                  checkboxInput(inputId = "chRF", label = "Cumulative Hazard", value = TRUE),
+                                  checkboxInput(inputId = "chOobRF", label = "Cumulative Hazard OOB", value = FALSE),
+                                  checkboxInput(inputId = "errorRateRF", label = "Error rate", value = FALSE),
+                                  checkboxInput(inputId = "varImp", label = "Variable Importance", value = FALSE)
+
                  ),
                  
                  actionButton(inputId = "runRF", label = "Run", icon = icon("play", lib = "glyphicon"))
@@ -990,8 +993,106 @@ library("shinyBS")
             
                tabPanel('Model',
 
-                    DT::dataTableOutput('individualSurvivalPredictions'),
-                    verbatimTextOutput('rf')
+
+                    #verbatimTextOutput("rf"),
+
+                    h4("Table 1: Survival"),
+                    DT::dataTableOutput('survival'),
+                    
+                    h4("Table 2: Survival OOB"),
+                    DT::dataTableOutput('survivalOOB'),
+
+                    h4("Table 4: Cumulative Hazard"),
+                    DT::dataTableOutput('chf'),
+
+                    h4("Table 5: Cumulative Hazard OOB"),
+                    DT::dataTableOutput('chfOOB'),
+
+                    h4("Table 6: Error Rate"),
+                    DT::dataTableOutput('errorRate'),
+
+                    h4("Table 7: Variable Importance"),
+                    DT::dataTableOutput('variableImportance')
+
+                ),
+
+               tabPanel('Plot',
+
+
+                    selectInput("selectRFPlot", "Select a plot", choices = list("Survival" = 1, "Survival OOB" = 2, "Hazard" = 3, "Hazard OOB" = 4, "Error rate" = 5), selected = 1), 
+
+                    conditionalPanel(condition = "input.selectRFPlot == 1" ,
+                        selectInput("selectObs", "Select cases for survival curves", choices = list("All" = 1, "Range" = 2, "Custom" = 3), selected = 1), 
+                            
+                          conditionalPanel(condition = "input.selectObs == 2" ,
+                             fluidRow(column(6,numericInput("fromRSF", "From", value = 1)),
+                             column(6,numericInput("toRSF", "To", value = 2)))
+
+                          ),
+
+                          conditionalPanel(condition = "input.selectObs == 3" ,
+
+                              selectizeInput("customSelect", "Select cases", choices = NULL, multiple = TRUE)
+
+                            )
+                      ),
+
+                      conditionalPanel(condition = "input.selectRFPlot == 2" ,
+                        selectInput("selectObsSurvOOB", "Select cases for survival curves", choices = list("All" = 1, "Range" = 2, "Custom" = 3), selected = 1), 
+                            
+                          conditionalPanel(condition = "input.selectObsSurvOOB == 2" ,
+                             fluidRow(column(6,numericInput("fromRSFOOB", "From", value = 1)),
+                             column(6,numericInput("toRSFOOB", "To", value = 2)))
+
+                          ),
+
+                          conditionalPanel(condition = "input.selectObsSurvOOB == 3" ,
+
+                              selectizeInput("customSelectOOB", "Select cases", choices = NULL, multiple = TRUE)
+
+                            )
+                      ),
+
+                      conditionalPanel(condition = "input.selectRFPlot == 3" ,
+                        selectInput("selectObsHazard", "Select cases for hazard curves", choices = list("All" = 1, "Range" = 2, "Custom" = 3), selected = 1), 
+                            
+                          conditionalPanel(condition = "input.selectObsHazard == 2" ,
+                             fluidRow(column(6,numericInput("fromHazard", "From", value = 1)),
+                             column(6,numericInput("toHazard", "To", value = 2)))
+
+                          ),
+
+                          conditionalPanel(condition = "input.selectObsHazard == 3" ,
+
+                              selectizeInput("customSelectHazard", "Select cases", choices = NULL, multiple = TRUE)
+
+                            )
+                      ),
+
+                      conditionalPanel(condition = "input.selectRFPlot == 4" ,
+                        selectInput("selectObsHazardOOB", "Select cases for hazard curves", choices = list("All" = 1, "Range" = 2, "Custom" = 3), selected = 1), 
+                            
+                          conditionalPanel(condition = "input.selectObsHazardOOB == 2" ,
+                             fluidRow(column(6,numericInput("fromHazardOOB", "From", value = 1)),
+                             column(6,numericInput("toHazardOOB", "To", value = 2)))
+
+                          ),
+
+                          conditionalPanel(condition = "input.selectObsHazardOOB == 3" ,
+
+                              selectizeInput("customSelectHazardOOB", "Select cases", choices = NULL, multiple = TRUE)
+
+                            )
+                      ),
+
+
+                      actionButton("createRSFplot", "Create plot"),
+
+                      highcharter::highchartOutput('rsfPlot')
+
+
+
+
                 )
               )
             ) # End for Condition 5
