@@ -991,35 +991,38 @@ library("shinyBS")
 
               tabsetPanel(
             
-               tabPanel('Model',
+               tabPanel('Random Survival Forests Results',
 
 
                     #verbatimTextOutput("rf"),
 
-                    h4("Table 1: Survival"),
+                    h4(textOutput(outputId = "indSurvPreds")),
                     DT::dataTableOutput('survival'),
                     
-                    h4("Table 2: Survival OOB"),
+                    h4(textOutput(outputId = "indSurvPredsOOB")),
                     DT::dataTableOutput('survivalOOB'),
 
-                    h4("Table 4: Cumulative Hazard"),
+                    h4(textOutput(outputId = "indChfPreds")),
                     DT::dataTableOutput('chf'),
 
-                    h4("Table 5: Cumulative Hazard OOB"),
+                    h4(textOutput(outputId = "indChfPredsOOB")),
+
                     DT::dataTableOutput('chfOOB'),
 
-                    h4("Table 6: Error Rate"),
+                    h4(textOutput(outputId = "errorRateText")),
                     DT::dataTableOutput('errorRate'),
 
-                    h4("Table 7: Variable Importance"),
-                    DT::dataTableOutput('variableImportance')
+                    h4(textOutput(outputId = "varImpText")),
+
+                    DT::dataTableOutput('variableImportance'),
+                    highchartOutput('variableImportancePlot')
 
                 ),
 
                tabPanel('Plot',
 
 
-                    selectInput("selectRFPlot", "Select a plot", choices = list("Survival" = 1, "Survival OOB" = 2, "Hazard" = 3, "Hazard OOB" = 4, "Error rate" = 5), selected = 1), 
+                    selectInput("selectRFPlot", "Select a plot", choices = list("Survival" = 1, "Survival OOB" = 2, "Hazard" = 3, "Hazard OOB" = 4, "Error rate" = 5, "Cox vs RSF" = 6), selected = 1), 
 
                     conditionalPanel(condition = "input.selectRFPlot == 1" ,
                         selectInput("selectObs", "Select cases for survival curves", choices = list("All" = 1, "Range" = 2, "Custom" = 3), selected = 1), 

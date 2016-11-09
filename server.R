@@ -1,24 +1,25 @@
 shinyServer(function(input, output, session) {
 
-library("DT")
-library("survival")
-library("KMsurv")
-library("survMisc")
-source("lifeTables.R")
-source("kaplanMeier.R")
-source("coxRegression.R")
-source("getDescriptiveResultsCoxRegression.R")
-source("stepwise.R")
-source("plotLT.R")
-require("ggplot2")
-source("ggsurv.R")
-source("ggsurv2.R")
-source("plotSchoenfeld.R")
-library("magrittr")
-library("dplyr")
-library("survminer")
-library("highcharter")
-library("randomForestSRC")
+    library("DT")
+    library("survival")
+    library("KMsurv")
+    library("survMisc")
+    source("lifeTables.R")
+    source("kaplanMeier.R")
+    source("coxRegression.R")
+    source("getDescriptiveResultsCoxRegression.R")
+    source("stepwise.R")
+    source("plotLT.R")
+    require("ggplot2")
+    source("ggsurv.R")
+    source("ggsurv2.R")
+    source("plotSchoenfeld.R")
+    library("magrittr")
+    library("dplyr")
+    library("survminer")
+    library("highcharter")
+    library("randomForestSRC")
+    library("pec")
 
 
 
@@ -2717,8 +2718,75 @@ kmPlotCoxReactive <- reactive({
 #################### Random Survival Forest (start) ##########################################
 ##############################################################################################
 
+output$indSurvPreds <- renderText({
+
+   if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
+
+    if (input$runRF && input$survivalResultRF){
+        'Table 1: Individual Survival Predictions'
+    }
+  }
+})
+
+
+output$indSurvPredsOOB <- renderText({
+
+   if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
+
+    if (input$runRF && input$survivalResultOobRF){
+        'Table 2: Individual Survival Predictions OOB'
+    }
+  }
+})
+
+output$indChfPreds <- renderText({
+
+   if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
+
+    if (input$runRF && input$chRF){
+        'Table 4: Individual Cumulative Hazard Predictions'
+    }
+  }
+})
+
+
+output$indChfPredsOOB <- renderText({
+
+   if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
+
+    if (input$runRF && input$chOobRF){
+        "Table 5: Individual Cumulative Hazard Predictions OOB"
+    }
+  }
+})
+
+output$errorRateText <- renderText({
+
+   if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
+
+    if (input$runRF && input$errorRateRF){
+        "Table 6: Error Rate"
+    }
+  }
+})
+
+
+output$varImpText <- renderText({
+
+   if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
+
+    if (input$runRF && input$varImp){
+        "Table 7: Variable Importance"
+    }
+  }
+})
+
+
+
+
 randomForestSurvival <- reactive({
   
+  if(input$runRF){
   
       survivalTime = input$survivalTimeRF
       categoricalInput =input$categoricalInputRF
@@ -2963,21 +3031,16 @@ randomForestSurvival <- reactive({
       
       attr(rf, "class") = "list"
       return(rf)  
+    }
 })
 
 
-output$rf <- renderPrint({
-
-randomForestSurvival()
-
-
-  })
 
 
  output$survival <- DT::renderDataTable({
 
 
-if(input$survivalResultRF){
+if(input$survivalResultRF && input$runRF){
     survival = data.frame(randomForestSurvival()$survival)
 
     survival = apply(survival, 2, FUN = function(x){
@@ -3003,109 +3066,109 @@ if(input$survivalResultRF){
 
  output$survivalOOB <- DT::renderDataTable({
 
-  if(input$survivalResultOobRF){
+    if(input$survivalResultOobRF  && input$runRF){
 
 
-    survivalOOB = data.frame(randomForestSurvival()$survival.oob)
+      survivalOOB = data.frame(randomForestSurvival()$survival.oob)
 
-    survivalOOB = apply(survivalOOB, 2, FUN = function(x){
-  
-          as.numeric(formatC(x, digits = 3))
-  
-    })
-
-    survivalOOB = as.data.frame(survivalOOB)
-    colnames(survivalOOB) = as.character(randomForestSurvival()$time.interest)
-  
-
-
-      datatable(survivalOOB, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
-      dom = 'Bfrtip',
-      buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
-      ))
-    }
- })
-
-
-  output$errorRate <- DT::renderDataTable({
-
-    if(input$errorRateRF){
-
-        errorRates = data.frame(randomForestSurvival()$err.rate)
-
-        errorRates = apply(errorRates, 2, FUN = function(x){
-      
-              as.numeric(formatC(x, digits = 3))
-          }
-        )
-
-        errorRates = data.frame(1:length(errorRates), errorRates)
-
-        colnames(errorRates) = c("Number of tree", "Error rate")
-
-          datatable(errorRates, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
-          dom = 'Bfrtip',
-          buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
-          ))
-   }   
- })
-
-
- output$chf <- DT::renderDataTable({
-
-  if(input$chRF){
-
-    chfRes = data.frame(randomForestSurvival()$chf)
-
-    chfRes = apply(chfRes, 2, FUN = function(x){
-  
-          as.numeric(formatC(x, digits = 3))
-  
-    })
-
-    chfRes = as.data.frame(chfRes)
-    colnames(chfRes) = as.character(randomForestSurvival()$time.interest)
-  
-
-
-      datatable(chfRes, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
-      dom = 'Bfrtip',
-      buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
-      ))
-    }
- })
-
-
- output$chfOOB <- DT::renderDataTable({
-
-    if(input$chOobRF){
-
-      chfOOBres = data.frame(randomForestSurvival()$chf.oob)
-
-      chfOOBres = apply(chfOOBres, 2, FUN = function(x){
+      survivalOOB = apply(survivalOOB, 2, FUN = function(x){
     
             as.numeric(formatC(x, digits = 3))
     
       })
 
-      chfOOBres = as.data.frame(chfOOBres)
-      colnames(chfOOBres) = as.character(randomForestSurvival()$time.interest)
+      survivalOOB = as.data.frame(survivalOOB)
+      colnames(survivalOOB) = as.character(randomForestSurvival()$time.interest)
     
 
 
-        datatable(chfOOBres, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+        datatable(survivalOOB, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
         dom = 'Bfrtip',
         buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
         ))
-
       }
+ })
+
+
+  output$errorRate <- DT::renderDataTable({
+
+            if(input$errorRateRF  && input$runRF){
+
+                errorRates = data.frame(randomForestSurvival()$err.rate)
+
+                errorRates = apply(errorRates, 2, FUN = function(x){
+              
+                      as.numeric(formatC(x, digits = 3))
+                  }
+                )
+
+                errorRates = data.frame(1:length(errorRates), errorRates)
+
+                colnames(errorRates) = c("Number of tree", "Error rate")
+
+                  datatable(errorRates, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+                  dom = 'Bfrtip',
+                  buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+                  ))
+           }   
+         })
+
+
+  output$chf <- DT::renderDataTable({
+
+          if(input$chRF  && input$runRF){
+
+            chfRes = data.frame(randomForestSurvival()$chf)
+
+            chfRes = apply(chfRes, 2, FUN = function(x){
+          
+                  as.numeric(formatC(x, digits = 3))
+          
+            })
+
+            chfRes = as.data.frame(chfRes)
+            colnames(chfRes) = as.character(randomForestSurvival()$time.interest)
+          
+
+
+              datatable(chfRes, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+              dom = 'Bfrtip',
+              buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+              ))
+            }
+         })
+
+
+         output$chfOOB <- DT::renderDataTable({
+
+            if(input$chOobRF  && input$runRF){
+
+              chfOOBres = data.frame(randomForestSurvival()$chf.oob)
+
+              chfOOBres = apply(chfOOBres, 2, FUN = function(x){
+            
+                    as.numeric(formatC(x, digits = 3))
+            
+              })
+
+              chfOOBres = as.data.frame(chfOOBres)
+              colnames(chfOOBres) = as.character(randomForestSurvival()$time.interest)
+            
+
+
+                datatable(chfOOBres, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+                dom = 'Bfrtip',
+                buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+                ))
+
+              }
 
  })
 
 
   output$variableImportance <- DT::renderDataTable({
 
-    if(input$varImp){
+    if(input$varImp  && input$runRF){
 
       variableImp = data.frame(t(randomForestSurvival()$importance))
 
@@ -3127,6 +3190,24 @@ if(input$survivalResultRF){
  })
 
 
+
+output$variableImportancePlot <- renderHighchart({
+
+ if(input$varImp  && input$runRF){
+      importance = as.numeric(formatC(randomForestSurvival()$importance, digits = 3, format = "f"))
+
+
+      highchart() %>% 
+        hc_chart(type = "column", inverted = TRUE) %>% 
+        hc_xAxis(categories = names(randomForestSurvival()$importance)) %>% 
+        hc_add_series(data = importance, name = "Importance") %>%
+        hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>")%>%
+        hc_add_theme(hc_theme_google())
+    }
+})
+
+
+
  observe({
        updateSelectInput(session, "customSelect", choices = c(1:nrow(dataM())))
    })
@@ -3146,7 +3227,7 @@ if(input$survivalResultRF){
 
  output$rsfPlot <- renderHighchart({
           
-    if(input$createRSFplot){        
+    if(input$createRSFplot  && input$runRF){        
         
         if(input$selectRFPlot == 1){
 
@@ -3296,7 +3377,9 @@ if(input$survivalResultRF){
           }
 
 
-          else if(input$selectRFPlot == 4){
+          else 
+
+          if(input$selectRFPlot == 4){
 
               hazardRFOOB = data.frame(t(randomForestSurvival()$chf.oob))
 
@@ -3408,8 +3491,287 @@ if(input$survivalResultRF){
 
           }
 
-        }
+          else if(input$selectRFPlot == 6){
 
+              survivalTime = input$survivalTimeRF
+              categoricalInput =input$categoricalInputRF
+              continuousInput = input$continuousInputRF 
+              statusVariable = input$statusVariableRF 
+              status = input$statusRF
+              addInteractions = input$addInteractionsRF
+              twoWayinteractions = input$twoWayInteractionsRF
+              threeWayinteractions = input$threeWayInteractionsRF
+              customInteractions = input$customInteractionsRF
+              selectCustomInteractionTerms = input$selectCustomInteractionsRF
+              timeDependetCovariate = input$addTimeDependentCovariatesRF
+              timeDependentVariableTransformation = input$timeDepTransformRF
+              selectTimeDependentCovariate = input$selectTimeDependentVariablesRF
+              strata = input$addStrataRF
+              strataVariable = input$selectStrataVariableRF
+              referenceCategory = input$refCategoryRF
+              multipleID = input$multipleIDRF
+              
+              
+              #if(input$runKM){
+              data = dataM()
+              
+              
+              if(!is.null(survivalTime)){
+                survivalTime = as.matrix(data[, survivalTime, drop = FALSE])
+                survivalTime = apply(survivalTime, 2, as.numeric)
+              }
+              
+              if(!is.null(categoricalInput)){
+                categoricalInput = as.data.frame(data[, categoricalInput, drop = FALSE])
+                categoricalInput = apply(categoricalInput, 2, as.factor)
+                categoricalInput = as.data.frame(categoricalInput)
+                
+                
+              }
+              
+              if(!is.null(continuousInput)){
+                continuousInput = as.data.frame(data[, continuousInput, drop = FALSE])
+                continuousInput = apply(continuousInput, 2, as.numeric)
+                continuousInput = as.data.frame(continuousInput)
+              }
+              
+              if(!is.null(statusVariable)){
+                statusVariable = as.factor(data[, statusVariable])
+                
+                
+              }
+              
+              if(!is.null(status)){
+                if(is.numeric(status)){status = as.factor(status)}else{status = as.factor(status)}
+                
+              }
+              
+              if(!is.null(categoricalInput) && !is.null(continuousInput)){
+                newData = data.frame(id2 =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime[,1], 
+                                     statusVar=statusVariable, categoricalInput, continuousInput)
+                newData = newData[complete.cases(newData),]
+                
+              }else if(!is.null(categoricalInput) && is.null(continuousInput)){
+                newData = data.frame(id2 =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime[,1], 
+                                     statusVar=statusVariable, categoricalInput)
+                newData = newData[complete.cases(newData),]
+                
+              }else if(is.null(categoricalInput) && !is.null(continuousInput)){
+                newData = data.frame(id2 =seq(1,dim(survivalTime)[1], 1), survivalTime = survivalTime[,1], 
+                                     statusVar=statusVariable, continuousInput)
+                newData = newData[complete.cases(newData),]
+                
+              }
+              
+              
+              
+              
+              if(referenceCategory != "first"){
+                for(l in 1:dim(categoricalInput)[2]){
+                  newData[, names(categoricalInput)[l]] <- relevel(categoricalInput[,l], ref = levels(categoricalInput[,l])[length(levels(categoricalInput[,l]))])
+                }
+              }
+              
+              
+              if(addInteractions){
+                
+                if(!is.null(categoricalInput) || !is.null(continuousInput)){
+                  
+                  fNames <- names(c(categoricalInput, continuousInput))
+                  
+                }  
+                
+                if(twoWayinteractions && length(fNames) >1){
+                  
+                  twoWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 2)), paste, collapse = ":"))
+                  names(twoWayInteractionTerms) <- NULL
+                  
+                }else{twoWayInteractionTerms = NULL}
+                
+                if(threeWayinteractions && length(fNames) >2){
+                  
+                  threeWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 3)), paste, collapse = ":"))
+                  names(threeWayInteractionTerms) <- NULL
+                  
+                }else{threeWayInteractionTerms = NULL}  
+                
+                #if(customInteractions && length(fNames) >2){
+                
+                #   ctwoWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 2)), paste, collapse = ":"))
+                #   names(twoWayInteractionTerms) <- NULL
+                
+                #   cthreeWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 3)), paste, collapse = ":"))
+                #  names(threeWayInteractionTerms) <- NULL
+                
+                
+                #  customInteractionTerms = c(ctwoWayInteractionTerms, cthreeWayInteractionTerms)
+                # names(customInteractionTerms) = NULL
+                
+                
+                
+                #}else{customInteractionTerms = NULL}
+                
+                if(customInteractions){
+                  
+                  interactions = selectCustomInteractionTerms
+                  
+                }else{
+                  
+                  interactions = c(twoWayInteractionTerms, threeWayInteractionTerms)
+                  
+                } 
+                
+              }else{
+                interactions = NULL
+                customInteractionTerms= NULL
+              }
+              
+              
+              if(strata){
+                
+                strataVar = strataVariable
+                newData = cbind.data.frame(newData, data[, strataVar])
+                names(newData)[dim(newData)[2]] = strataVar
+                
+              }
+              
+              
+              newData = cbind.data.frame(newData, data[colnames(data)[!(colnames(data) %in% colnames(newData))]])
+              
+              # if(multipleID != TRUE){  
+              #   newData$statusVar = newData$statusVar%in%status
+              #   
+              #   newData$id <- 1:nrow(newData)
+              #   cut.points <- unique(newData$survivalTime[newData$statusVar == TRUE])
+              #   newData <- survSplit(formula = Surv(survivalTime, statusVar)~., data = newData, cut = cut.points, end = "stop",
+              #                        start = "start", event = "statusVar")
+              # }
+              newData$statusVar = as.factor(newData$statusVar)%in%status
+              
+              if(timeDependetCovariate && !is.null(selectTimeDependentCovariate)){
+                
+                timeDependentCovariateNames = list()
+                for(i in 1:length(selectTimeDependentCovariate)){
+                  
+                  if(timeDependentVariableTransformation == "log"){
+                    
+                    newData = cbind.data.frame(newData, tmpNames = newData[,selectTimeDependentCovariate[i]]*log(newData[, "survivalTime"]))
+                    
+                  }else{
+                    
+                    newData = cbind.data.frame(newData, tmpNames = as.numeric(newData[,selectTimeDependentCovariate[i]])*newData[, "survivalTime"])
+                    
+                  }
+                  
+                  names(newData)[dim(newData)[2]] = timeDependentCovariateNames[[i]] = paste0("time_", selectTimeDependentCovariate[i])
+                  
+                }
+                
+                timeDependentNames = unlist(timeDependentCovariateNames)    
+                
+              }
+              
+              # if(multipleID){  
+              #   names(newData)[which(names(newData) == "start")] = "start2"
+              #   
+              #   newData <- newData %>%
+              #     group_by(id) %>%
+              #     mutate(start = 0:(n() - 1))
+              #   
+              #   newData = as.data.frame(newData)
+              #   
+              #   ind = row.names(newData[newData$start !=0,])
+              #   
+              #   newData$start[as.numeric(ind)] =  newData$survivalTime[as.numeric(ind)-1]
+              # }
+              
+              if(!is.null(categoricalInput) || !is.null(continuousInput)){
+                
+                predictors = paste0(names(c(categoricalInput, continuousInput)), collapse = "+")
+                
+                if(!is.null(interactions)){
+                  
+                  
+                  if(length(interactions) > 1){
+                    interactions2 = paste(interactions, collapse = "+")
+                    predictors2 = paste(predictors, interactions2, sep = "+", collapse = "+")
+                  }    
+                  
+                  if(length(interactions) == 1){
+                    predictors2 = paste(predictors, interactions, sep = "+")
+                  }
+                  predictors = predictors2
+                }
+                
+                if(timeDependetCovariate && !is.null(selectTimeDependentCovariate)){
+                  
+                  
+                  if(length(timeDependentNames) > 1){
+                    timeDependents = paste(timeDependentNames, collapse = "+")
+                  }else{
+                    
+                    timeDependents =  timeDependentNames
+                  }
+                  predictors = paste(predictors, timeDependents, sep = "+", collapse = "+")
+                }
+                
+                if(strata && !is.null(strataVariable)){
+                  
+                  strataVars = paste0("strata(",strataVar,")")
+                  predictors = paste(predictors, strataVars, sep = "+", collapse = "+")
+                  
+                } 
+                
+                }else{predictors = 1}
+              
+                formula = as.formula(paste0("Surv(survivalTime, statusVar ==  TRUE) ~ ", predictors))
+
+
+                Models <- list("Cox model"=coxph(formula = formula, data=newData, y=TRUE),
+                                "RSF model"=rfsrc(formula = formula, data = newData, ntree = input$ntree, bootstrap = input$bootstrap, tree.err=TRUE, 
+                     importance = TRUE, membership = TRUE, statistics = TRUE, do.trace = TRUE,
+                     mtry = input$mtry, nodesize = input$nodesize, nodedepth = input$nodedepth, splitrule = input$splitrule, nsplit = input$nsplit,
+                     split.null = FALSE, na.action = input$naAction, nimpute = input$nimpute, proximity = input$proximity, sampsize = NULL,
+                     samptype = input$samptype, case.wt = NULL, xvar.wt = NULL, forest = TRUE, var.used = FALSE, 
+                     split.depth = FALSE, seed = 1234, coerce.factor = NULL, y=TRUE))
+
+                # compute the apparent prediction error 
+                PredError <- pec(object=Models,
+                                 formula = formula,
+                                 data=newData,
+                                 exact=TRUE,
+                                 cens.model="marginal",
+                                 splitMethod="none",
+                                 B=0,
+                                 verbose=TRUE)
+
+
+                modelErrors = data.frame(PredError$AppErr)
+
+                modelErrorsList = list()
+
+                for(i in 1:ncol(modelErrors)){
+                  
+                  modelErrorsList[[i]] = list(data = as.matrix(cbind(PredError$time, modelErrors[,i])), name = colnames(modelErrors[i]), type = "line")
+                  
+                }
+                names(modelErrorsList) = NULL
+
+
+
+                highchart() %>% hc_exporting(enabled = TRUE, filename = "modelErrorPlot") %>% 
+                  hc_add_series_list(lst =modelErrorsList) %>%
+                  hc_chart(zoomType = "xy", inverted = FALSE) %>%
+                  hc_xAxis(categories = NULL, title = list(text = "Time")) %>%
+                  hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Prediction error"))%>%
+                  hc_legend(enabled = TRUE) %>%
+                  hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+                  hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
+                                 errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+                  hc_add_theme(hc_theme_google())
+
+          }
+        }
 })
  
 ##############################################################################################
