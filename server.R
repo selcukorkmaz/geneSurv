@@ -1,5 +1,6 @@
 shinyServer(function(input, output, session) {
 
+    library("glmnet")
     library("DT")
     library("survival")
     library("KMsurv")
@@ -20,6 +21,7 @@ shinyServer(function(input, output, session) {
     library("highcharter")
     library("randomForestSRC")
     library("pec")
+
 
 
 
@@ -282,7 +284,48 @@ observe({
  ################################ Observe Cox Regression (end) #########################
  #######################################################################################
 
+ #########################################################################################
+ ################################ Observe Regularized Cox Regression (start) ###########################
+ #########################################################################################
 
+ observe({
+     updateSelectizeInput(session, "survivalTimerCox", choices = colnames(dataM()), selected = colnames(dataM())[1])
+ })
+
+ 
+ observe({
+     data_tmp_rCox <- dataM()
+     if (!is.null(data_tmp_rCox)){
+         updateSelectizeInput(session = session, inputId = "statusVariablerCox", choices = colnames(data_tmp_rCox), selected = colnames(data_tmp_rCox)[4])
+     } else {
+         updateSelectizeInput(session = session, inputId = "statusVariablerCox", choices = "", selected = "")
+     }
+ })
+
+  statusVarrCox <- reactive({return(input$statusVariablerCox)})
+
+ 
+ observe({
+     data_tmp_rCox <- dataM()
+     if (!is.null(data_tmp_rCox)){
+         idx_rCox <- which(colnames(data_tmp_rCox) %in% statusVarrCox())
+         categories_rCox <- levels(as.factor(as.character(data_tmp_rCox[ ,idx_rCox])))
+         
+         updateSelectizeInput(session = session, inputId = "statusrCox", choices = categories_rCox, selected = categories_rCox[2])
+     } else {
+         updateSelectizeInput(session = session, inputId = "statusrCox", choices = "", selected = "")
+     }
+ })
+
+
+observe({
+    updateSelectizeInput(session, "selectVariablerCox", choices = colnames(dataM()), selected = colnames(dataM())[3])
+})
+
+
+
+ ################################ Observe Regularized Cox Regression (end) #########################
+ #######################################################################################
 ################################ Observe Random Survival Forest (start) ###########################
 
  observe({
@@ -315,7 +358,6 @@ observe({
      }
  })
 
-#############################################################
 
 observe({
     updateSelectizeInput(session, "categoricalInputRF", choices = colnames(dataM()), selected = colnames(dataM())[3])
@@ -3208,21 +3250,32 @@ output$variableImportancePlot <- renderHighchart({
 
 
 
+
  observe({
-       updateSelectInput(session, "customSelect", choices = c(1:nrow(dataM())))
+  if(input$runRF && input$createRSFplot){
+       updateSelectInput(session, "customSelect", choices = c(1:nrow(dataM())), selected = NULL)
+   }
    })
 
   observe({
-       updateSelectInput(session, "customSelectOOB", choices = c(1:nrow(dataM())))
+    if(input$runRF && input$createRSFplot){
+       updateSelectInput(session, "customSelectOOB", choices = c(1:nrow(dataM())), selected = NULL)
+   }
    })
 
   observe({
-       updateSelectInput(session, "customSelectHazard", choices = c(1:nrow(dataM())))
+    if(input$runRF && input$createRSFplot){
+       updateSelectInput(session, "customSelectHazard", choices = c(1:nrow(dataM())), selected = NULL)
+     }
    })
 
     observe({
-       updateSelectInput(session, "customSelectHazardOOB", choices = c(1:nrow(dataM())))
+      if(input$runRF && input$createRSFplot){
+       updateSelectInput(session, "customSelectHazardOOB", choices = c(1:nrow(dataM())), selected = NULL)
+     }
    })
+
+
 
 
  output$rsfPlot <- renderHighchart({
@@ -3776,6 +3829,161 @@ output$variableImportancePlot <- renderHighchart({
  
 ##############################################################################################
 #################### Random Survival Forest (end) ############################################
+##############################################################################################
+
+
+##############################################################################################
+#################### Regularized Cox Regression (start) ############################################
+##############################################################################################
+
+
+
+regularCoxResult <- reactive({
+
+      survivalTimerCox = input$survivalTimerCox
+      survivalStatusrCox = input$statusVariablerCox
+
+      alpharCox = input$rAlpha
+
+      regCoxList = list()
+
+      if(input$selectAllVarsrCox){
+      
+            indx = !(colnames(dataM()) %in% c(input$survivalTimerCox, survivalStatusrCox))
+
+      }else{
+
+
+            indx = (colnames(dataM()) %in% input$selectVariablerCox)
+
+      }
+
+
+      x = data.matrix(dataM()[,indx, drop = FALSE])
+
+      y= Surv(dataM()[,survivalTimerCox], dataM()[,survivalStatusrCox])
+
+      set.seed(1234)
+      cvFit = cv.glmnet(x, y, family = "cox", alpha = alpharCox)
+      coefficients = as.data.frame(as.matrix(coef(cvFit, s = cvFit$lambda.min)))
+      coefficients$`1` = as.numeric(formatC(coefficients$`1`, digits = 3, format = "f"))
+
+      coefficients2 = data.frame(rownames(coefficients), coefficients[,1])
+      coefficients3 = coefficients2[coefficients2[2] != 0,]
+      colnames(coefficients3) = c("Variable", "Coefficient estimate")
+
+
+
+      varsNotInTheModel = coefficients2[coefficients2[2] == 0,]
+
+      if(nrow(varsNotInTheModel) > 0){
+        varsNotInTheModel$coefficients...1. = formatC(varsNotInTheModel$coefficients...1., digits = 3, format = "f")
+        colnames(varsNotInTheModel) = c("Variable", "Coefficient estimate")
+      }else{
+
+        varsNotInTheModel = NULL
+      }
+
+      regCoxList = list(coefficients3, varsNotInTheModel)
+
+      return(regCoxList)
+
+
+  })
+
+
+
+output$regularCox <- DT::renderDataTable({
+
+  if(input$runRegularized){
+       datatable(regularCoxResult()[[1]], extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+           dom = 'Bfrtip',
+           buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+           )) 
+
+    }  
+ })
+
+
+output$regularNoVariableCox <- DT::renderDataTable({
+
+  if(input$runRegularized){
+       datatable(regularCoxResult()[[2]], extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+           dom = 'Bfrtip',
+           buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+           )) 
+
+    }
+ })
+
+
+output$regularizedPlot <- renderHighchart({
+
+  if(input$runRegularized){
+     survivalTimerCox = input$survivalTimerCox
+      survivalStatusrCox = input$statusVariablerCox
+
+      alpharCox = input$rAlpha
+
+      regCoxList = list()
+
+      if(input$selectAllVarsrCox){
+      
+            indx = !(colnames(dataM()) %in% c(input$survivalTimerCox, survivalStatusrCox))
+
+      }else{
+
+
+            indx = (colnames(dataM()) %in% input$selectVariablerCox)
+
+      }
+
+
+      x = data.matrix(dataM()[,indx, drop = FALSE])
+
+      y= Surv(dataM()[,survivalTimerCox], dataM()[,survivalStatusrCox])
+
+      set.seed(1234)
+      cvFit = cv.glmnet(x, y, family = "cox", alpha = alpharCox, type.measure = "deviance", nfolds = as.numeric(input$nFold))
+
+
+      highchart() %>% hc_exporting(enabled = TRUE, filename = "lambdaPlot") %>% 
+        hc_add_series(name = "CI", type = "line", data = sort(cvFit$cvm), showInLegend = FALSE, zIndex = 1, marker = list(lineColor = "black", lineWidth = 1), lineWidth = 0, id = "survival") %>%
+        hc_add_series(name = "CI", data = as.matrix(cbind(sort(cvFit$cvlo), sort(cvFit$cvup))),type = "errorbar", names = "Limits", showInLegend = FALSE, zIndex = 0, lineWidth = 1.5, linkedTo = "survival") %>%
+        hc_chart(zoomType = "xy", inverted = FALSE) %>%
+        hc_xAxis(categories = sort(round(log(cvFit$lambda), 1)), title = list(text = "log(Lambda)")) %>%
+        hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Partial Likelihood Deviance")) %>%
+        #hc_plotOptions(tooltip = list(headerFormat = "<b>Time: </b>{point.x}")) %>%
+        hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Partial Likelihood Deviance: </b>{point.x} <br>") %>%
+        hc_plotOptions(line = list(tooltip = list(pointFormat = "<b>{series.name}: </b>{point.y:.3f} ")), 
+                       errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+        hc_add_theme(hc_theme_google())
+
+      }
+
+  })
+
+ output$varInModelText <- renderText({
+     if (input$runRegularized){
+         'Table 1: Variables in the model'
+     }
+ })
+
+  output$crossValCurvePlot <- renderText({
+     if (input$runRegularized){
+         'Cross-validation curve'
+     }
+ })
+
+ output$varNotInModelText <- renderText({
+     if (input$runRegularized && !is.null(regularCoxResult()[[2]])){
+         'Table 2: Variables NOT in the model'
+     }
+ })
+
+
+##############################################################################################
+#################### Regularized Cox Regression (end) ############################################
 ##############################################################################################
 
  

@@ -1,5 +1,6 @@
 library("shinythemes")
 library("shinyBS")
+library("highcharter")
 
   shinyUI(
    fluidPage(
@@ -16,7 +17,6 @@ library("shinyBS")
        ),
 
        conditionalPanel(condition="input.tabs1=='Authors'",
-
 
             HTML('<center><img src="images/team.png" width=200 height=200></center>')
 
@@ -39,7 +39,6 @@ library("shinyBS")
         ),  
 
          ################################# About (end) #####################################
-
          ################################# Data Upload (start) #####################################
 
 
@@ -72,9 +71,7 @@ library("shinyBS")
       conditionalPanel(condition="input.tabs1=='Analysis'",
 
 
-          selectizeInput(inputId = "selectAnalysis", label = "Select a Method", choices = c("Life Table" = 1, "Kaplan-Meier" = 2, "Cox Regression" = 3, "Cox Regression with Lasso" = 4, "Random Survival Forests" = 5), selected = 5),
-
-
+          selectizeInput(inputId = "selectAnalysis", label = "Select a Method", choices = c("Life Table" = 1, "Kaplan-Meier" = 2, "Cox Regression" = 3, "Regularized Cox Regression" = 4, "Random Survival Forests" = 5), selected = 4),
 
           conditionalPanel(condition="input.selectAnalysis=='1'",
             checkboxInput(inputId = "inputs", label = tags$b("Inputs"), value = TRUE),
@@ -127,7 +124,7 @@ library("shinyBS")
                 conditionalPanel(condition = "input.outputs",
 
 
-#HTML('<p>  <script src="https://code.highcharts.com/highcharts.js"></script><div id="result"></div><table id="table-sparkline"> <thead><tr><th>State</th><th>Income</th><th>Income per quarter</th><th>Costs</th><th>Costs per quarter</th><th>Result</th><th>Result per quarter</th></tr></thead><tbody id="tbody-sparkline"><tr><th>Alabama</th><td>254</td><td data-sparkline="71, 78, 39, 66 "/><td>296</td><td data-sparkline="68, 52, 80, 96 "/><td>-42</td><td data-sparkline="3, 26, -41, -30 ; column"/></tr></tbody></table></p>'),     
+                  #HTML('<p>  <script src="https://code.highcharts.com/highcharts.js"></script><div id="result"></div><table id="table-sparkline"> <thead><tr><th>State</th><th>Income</th><th>Income per quarter</th><th>Costs</th><th>Costs per quarter</th><th>Result</th><th>Result per quarter</th></tr></thead><tbody id="tbody-sparkline"><tr><th>Alabama</th><td>254</td><td data-sparkline="71, 78, 39, 66 "/><td>296</td><td data-sparkline="68, 52, 80, 96 "/><td>-42</td><td data-sparkline="3, 26, -41, -30 ; column"/></tr></tbody></table></p>'),     
 
 
                   checkboxInput(inputId = "caseSummary", label = "Case summary", value = TRUE),
@@ -139,7 +136,7 @@ library("shinyBS")
                   ),
                 #),
 
-            actionButton(inputId = "run", label = "Run", icon = icon("play", lib = "glyphicon"))
+                  actionButton(inputId = "run", label = "Run", icon = icon("play", lib = "glyphicon"))
 
            ),
 
@@ -317,7 +314,39 @@ library("shinyBS")
         
            ),
 
-      conditionalPanel(condition="input.selectAnalysis=='5'",
+          
+          conditionalPanel(condition="input.selectAnalysis=='4'",
+
+              checkboxInput(inputId = "inputsrCox", label = tags$b("Inputs"), value = TRUE),
+            
+              conditionalPanel(condition = "input.inputsrCox",
+            
+
+                  selectizeInput("survivalTimerCox", "Survival time", choices = NULL, multiple = FALSE),
+              
+                  selectizeInput("statusVariablerCox", "Select status variable", choices = NULL, multiple = FALSE),
+
+                  selectizeInput("statusrCox", "Select category for status variable", choices = NULL, multiple = FALSE),
+
+                  h5(tags$b("Variables for selection")),  
+                  checkboxInput("selectAllVarsrCox", "Select All Variables", value = TRUE),
+
+                  conditionalPanel(condition="!input.selectAllVarsrCox",
+
+                    selectizeInput("selectVariablerCox", "Select variables", choices = NULL, multiple = TRUE)
+                  ),
+
+                  sliderInput("rAlpha", "Penalty term", value = 1, min = 0, max = 1, step = 0.1),
+                  bsTooltip(id = "rAlpha", title = "0 for ridge penalty, 1 for lasso penalty, (0,1) for elastic net.", placement = "bottom", trigger = "hover"),
+
+                  numericInput("nFold", "Number of folds for cross-validation", value = 10, min = 3, step = 1),
+              
+                  actionButton("runRegularized", "Run")
+
+              )
+          ),
+
+          conditionalPanel(condition="input.selectAnalysis=='5'",
                  
                  checkboxInput(inputId = "inputsRF", label = tags$b("Inputs"), value = TRUE),
                  
@@ -508,7 +537,7 @@ library("shinyBS")
 
               tabsetPanel(
 
-                  tabPanel('Result',
+                  tabPanel('Life Table Results',
 
                       h4(textOutput(outputId = "descriptivesText")),
                       DT::dataTableOutput('descriptives'),
@@ -577,7 +606,7 @@ library("shinyBS")
 
               tabsetPanel(
 
-                  tabPanel('Result',
+                  tabPanel('Kaplan-Meier Results',
                     #verbatimTextOutput("str"),
                     h4(textOutput(outputId = "descriptivesTextKM")),
                     DT::dataTableOutput('descriptivesKM'),
@@ -621,7 +650,7 @@ library("shinyBS")
                   
                   ),
 
-                  tabPanel('Plot',
+                  tabPanel('Plots',
 
                         br(),
 
@@ -799,193 +828,211 @@ library("shinyBS")
         
             conditionalPanel(condition="input.selectAnalysis=='3'",
 
-              tabsetPanel(
-            
-               tabPanel('Model',
+                      tabsetPanel(
+                    
+                       tabPanel('Cox Regression Results',
 
-                    #verbatimTextOutput("str"),
-                    h4(textOutput(outputId = "displaySummaryCox")),
-                    verbatimTextOutput("summaryCox"),
+                            #verbatimTextOutput("str"),
+                            h4(textOutput(outputId = "displaySummaryCox")),
+                            verbatimTextOutput("summaryCox"),
 
-                    h4(textOutput(outputId = "displayCoefficientEstimatesCox")),
-                    DT::dataTableOutput('displayCoefficientEstimatesResult'),
+                            h4(textOutput(outputId = "displayCoefficientEstimatesCox")),
+                            DT::dataTableOutput('displayCoefficientEstimatesResult'),
 
-                    h4(textOutput(outputId = "hazardRatioCox")),
-                    DT::dataTableOutput('hazardRatioResultCox'),
-                    conditionalPanel(condition = "input.runCox",
-                      conditionalPanel(condition = "input.hrcox",
-                      checkboxInput(inputId = "createHazardCoxPlot", label = "Create Plot", value = FALSE)
-                      
-                    )),
+                            h4(textOutput(outputId = "hazardRatioCox")),
+                            DT::dataTableOutput('hazardRatioResultCox'),
+                            conditionalPanel(condition = "input.runCox",
+                              conditionalPanel(condition = "input.hrcox",
+                              checkboxInput(inputId = "createHazardCoxPlot", label = "Create Plot", value = FALSE)
+                              
+                            )),
 
-                    conditionalPanel(condition = "input.createHazardCoxPlot",
+                            conditionalPanel(condition = "input.createHazardCoxPlot",
 
-                        highcharter::highchartOutput("hazardErrorbar")
+                                highcharter::highchartOutput("hazardErrorbar")
 
-                      ),
+                              ),
 
-
-                    #fluidRow(
-                    #  column(5, DT::dataTableOutput('hazardRatioResultCox')),
-                    #  column(7, plotOutput("hazardErrorbar"))
-                    #),
-
-                    h4(textOutput(outputId = "goodnessOfFitTestsText")),
-                    DT::dataTableOutput('goodnessOfFitTestsRes'),
-
-                    h4(textOutput(outputId = "analysisOfDevianceCox")),
-                    DT::dataTableOutput('analysisOfDevianceRes'),
-
-                    h4(textOutput(outputId = "storePredictionsCox")),
-                    DT::dataTableOutput('predictionsCox'),
-
-                    h4(textOutput(outputId = "residualsCoxText")),
-                    DT::dataTableOutput('residualsCox'),
-
-                    h4(textOutput(outputId = "martingaleResidualsCoxText")),
-                    DT::dataTableOutput('martingaleResidualsCox'),
-
-                    h4(textOutput(outputId = "schoenfeldResidualsCoxText")),
-                    DT::dataTableOutput('schoenfeldResidualsCox'),
-
-                    h4(textOutput(outputId = "dfBetasCoxText")),
-                    DT::dataTableOutput('dfBetasCox')
-
-                  ),
-
-                tabPanel('Proportional Hazard Assumption',
-
-                  h4(textOutput(outputId = "phAssumptionCoxText")),
-                  DT::dataTableOutput('phAssumptionCox'),
-
-                  br(),
-
-                  conditionalPanel(condition = "input.runCox",
-
-                      fluidRow(
-                            column(4, selectizeInput(inputId = "selectPlotCox", label = "Select a plot", choices = c("Schoenfeld" = 1, "Log-Minus-Log" = 2), selected = NULL)),
-                            column(4, selectizeInput(inputId = "selectVariablesForSchoenfeld", label = "Select a variable ", choices = NULL, selected = NULL)),
-                            column(4, actionButton(inputId = "createSchoenfeldPlot", label = "Create plot", icon = icon("signal", lib = "glyphicon")))
-                      )   
-                  ),
-
-                  conditionalPanel(condition = "input.createSchoenfeldPlot" ,
- 
-                          h4(textOutput(outputId = "phPlotsText")),
-                          highcharter::highchartOutput('phPlots', width = "100%", height = "525px"),
-
-
-                          conditionalPanel(condition = "input.createSchoenfeldPlot" ,
-                      
-                          checkboxInput(inputId = "phPlotOptions", label = "Edit Plot", value = FALSE)
-                      
-                        ),
-                        # KM Options
-                        conditionalPanel(condition = "input.phPlotOptions && input.selectPlotCox == 2" ,
-                           
-                          fluidRow(
-                              column(4,textInput("mainPanelLmlSchoenfeld", "Main Title", value = "Log-Minus-Log Plot")),
-                              column(4,textInput("xlabLmlSchoenfeld", "X-axis Label", value = "Time")),
-                              column(4,textInput("ylabLmlSchoenfeld", "Y-axis Label", value = "log(-log(survival))"))
-                            ),
 
                             #fluidRow(
-                            #  column(4, checkboxInput("addCensLmlSchoenfeld", "Add censored cases", value = TRUE)),
-                            #  
-                            #  column(4,selectizeInput("censShapeLmlSchoenfeld", "Select censored case shape",
-                            #                          choices = c("\U002B" = "plus", "\U25EF" = "circle", "\U25B3" = "triangle",  "\U25A2" = "square", "\U2573" = "cross"),
-                            #                          selected = "plus")),
-                            #  column(4,shinyjs::colourInput("censColLmlSchoenfeld", "Choose censored cases color", value = "black"))
+                            #  column(5, DT::dataTableOutput('hazardRatioResultCox')),
+                            #  column(7, plotOutput("hazardErrorbar"))
                             #),
 
+                            h4(textOutput(outputId = "goodnessOfFitTestsText")),
+                            DT::dataTableOutput('goodnessOfFitTestsRes'),
 
-                            fluidRow(
-                              column(4,selectizeInput("ltyLmlSchoenfeld", "LmlSchoenfeld curve line type",
-                                                      choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "Solid",
-                                                                  "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "ShortDash",
-                                                                  "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "ShortDot",
-                                                                  "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "ShortDashDot",
-                                                                  "\U2500 \U2500 \U2500 \U2500 \U2500" = "LongDash",
-                                                                  "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "LongDashShortDash"),
-                                                      selected = "Solid")
-                              ),
+                            h4(textOutput(outputId = "analysisOfDevianceCox")),
+                            DT::dataTableOutput('analysisOfDevianceRes'),
+
+                            h4(textOutput(outputId = "storePredictionsCox")),
+                            DT::dataTableOutput('predictionsCox'),
+
+                            h4(textOutput(outputId = "residualsCoxText")),
+                            DT::dataTableOutput('residualsCox'),
+
+                            h4(textOutput(outputId = "martingaleResidualsCoxText")),
+                            DT::dataTableOutput('martingaleResidualsCox'),
+
+                            h4(textOutput(outputId = "schoenfeldResidualsCoxText")),
+                            DT::dataTableOutput('schoenfeldResidualsCox'),
+
+                            h4(textOutput(outputId = "dfBetasCoxText")),
+                            DT::dataTableOutput('dfBetasCox')
+
+                          ),
+
+                        tabPanel('Proportional Hazard Assumption',
+
+                          h4(textOutput(outputId = "phAssumptionCoxText")),
+                          DT::dataTableOutput('phAssumptionCox'),
+
+                          br(),
+
+                          conditionalPanel(condition = "input.runCox",
+
+                              fluidRow(
+                                    column(4, selectizeInput(inputId = "selectPlotCox", label = "Select a plot", choices = c("Schoenfeld" = 1, "Log-Minus-Log" = 2), selected = NULL)),
+                                    column(4, selectizeInput(inputId = "selectVariablesForSchoenfeld", label = "Select a variable ", choices = NULL, selected = NULL)),
+                                    column(4, actionButton(inputId = "createSchoenfeldPlot", label = "Create plot", icon = icon("signal", lib = "glyphicon")))
+                              )   
+                          ),
+
+                          conditionalPanel(condition = "input.createSchoenfeldPlot" ,
+         
+                                  h4(textOutput(outputId = "phPlotsText")),
+                                  highcharter::highchartOutput('phPlots', width = "100%", height = "525px"),
+
+
+                                  conditionalPanel(condition = "input.createSchoenfeldPlot" ,
                               
-                              column(4,checkboxInput(inputId = "addCILmlSchoenfeld", label = "Add Confidence Interval", value = FALSE)),
+                                  checkboxInput(inputId = "phPlotOptions", label = "Edit Plot", value = FALSE)
                               
-                              column(4, sliderInput("alphaLmlSchoenfeld", "Confidence Interval Opacity", min = 0, max = 1, value = 0.5, step= 0.1))
-                            ),
+                                ),
+                                # KM Options
+                                conditionalPanel(condition = "input.phPlotOptions && input.selectPlotCox == 2" ,
+                                   
+                                  fluidRow(
+                                      column(4,textInput("mainPanelLmlSchoenfeld", "Main Title", value = "Log-Minus-Log Plot")),
+                                      column(4,textInput("xlabLmlSchoenfeld", "X-axis Label", value = "Time")),
+                                      column(4,textInput("ylabLmlSchoenfeld", "Y-axis Label", value = "log(-log(survival))"))
+                                    ),
+
+                                    #fluidRow(
+                                    #  column(4, checkboxInput("addCensLmlSchoenfeld", "Add censored cases", value = TRUE)),
+                                    #  
+                                    #  column(4,selectizeInput("censShapeLmlSchoenfeld", "Select censored case shape",
+                                    #                          choices = c("\U002B" = "plus", "\U25EF" = "circle", "\U25B3" = "triangle",  "\U25A2" = "square", "\U2573" = "cross"),
+                                    #                          selected = "plus")),
+                                    #  column(4,shinyjs::colourInput("censColLmlSchoenfeld", "Choose censored cases color", value = "black"))
+                                    #),
+
+
+                                    fluidRow(
+                                      column(4,selectizeInput("ltyLmlSchoenfeld", "LmlSchoenfeld curve line type",
+                                                              choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "Solid",
+                                                                          "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "ShortDash",
+                                                                          "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "ShortDot",
+                                                                          "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "ShortDashDot",
+                                                                          "\U2500 \U2500 \U2500 \U2500 \U2500" = "LongDash",
+                                                                          "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "LongDashShortDash"),
+                                                              selected = "Solid")
+                                      ),
+                                      
+                                      column(4,checkboxInput(inputId = "addCILmlSchoenfeld", label = "Add Confidence Interval", value = FALSE)),
+                                      
+                                      column(4, sliderInput("alphaLmlSchoenfeld", "Confidence Interval Opacity", min = 0, max = 1, value = 0.5, step= 0.1))
+                                    ),
 
 
 
-                            fluidRow(
-                              column(4, shinyjs::colourInput("backgroundSchoenfeldLml", "Plot background color", value = "white")),
-                              
-                              column(4, selectInput("changeThemeSchoenfeldLml", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
-                                                                                                    "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
-                                                                                                    "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
-                                                    selected = "theme0"))
-                            )
+                                    fluidRow(
+                                      column(4, shinyjs::colourInput("backgroundSchoenfeldLml", "Plot background color", value = "white")),
+                                      
+                                      column(4, selectInput("changeThemeSchoenfeldLml", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
+                                                                                                            "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
+                                                                                                            "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
+                                                            selected = "theme0"))
+                                    )
 
-                          ), # End for KM Options
-                  
-                          # Hazard Plot Options
-                        conditionalPanel(condition = "input.phPlotOptions && input.selectPlotCox == 1" ,
-                            fluidRow(
-                              
+                                  ), # End for KM Options
+                          
+                                  # Hazard Plot Options
+                                conditionalPanel(condition = "input.phPlotOptions && input.selectPlotCox == 1" ,
+                                    fluidRow(
+                                      
 
-                              column(4, checkboxInput(inputId = "addCIschoenfeld", label = "Add Confidence Interval", value = FALSE)),
+                                      column(4, checkboxInput(inputId = "addCIschoenfeld", label = "Add Confidence Interval", value = FALSE)),
 
-                              column(4, checkboxInput(inputId = "addResidual", label = "Add Residuals", value = TRUE)),
-
-
-                              column(4,selectizeInput("ltySchoenfeld", "Line type",
-                                  choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "Solid",
-                                                       "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "ShortDash",
-                                                       "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "ShortDot",
-                                                       "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "ShortDashDot",
-                                                       "\U2500 \U2500 \U2500 \U2500 \U2500" = "LongDash",
-                                                       "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "LongDashShortDash"),
-                                           selected = "Solid"))
-
-                            ),
+                                      column(4, checkboxInput(inputId = "addResidual", label = "Add Residuals", value = TRUE)),
 
 
+                                      column(4,selectizeInput("ltySchoenfeld", "Line type",
+                                          choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "Solid",
+                                                               "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "ShortDash",
+                                                               "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "ShortDot",
+                                                               "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "ShortDashDot",
+                                                               "\U2500 \U2500 \U2500 \U2500 \U2500" = "LongDash",
+                                                               "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "LongDashShortDash"),
+                                                   selected = "Solid"))
 
-                            fluidRow( 
-                              
-                              column(4,shinyjs::colourInput("curveColSchoenfeld", "Choose line color", value = "#204BD9")),
-                              column(4,shinyjs::colourInput("colSchoenfeldResiduals", "Choose color for residuals", value = "#000000")),
-                              column(4,shinyjs::colourInput("colSchoenfeldCI", "Choose color for CI", value = "#59A819"))
-                            ),
+                                    ),
 
-                            fluidRow(
-                              column(4,textInput("mainPanelSchoenfeld", "Main Title", value = "Schoenfeld Plot")),
-                              column(4,textInput("xlabSchoenfeld", "X-axis Label", value = "Time")),
-                              column(4,textInput("ylabSchoenfeld", "Y-axis Label", value = "Scaled Schoenfeld residuals for "))
-                            ),
 
-                            fluidRow(
-                              column(4, sliderInput("dfSchoenfeld", "Degrees of freedom for the spline", min = 2, max = 10, value = 4, step= 1)),
-                              column(4, numericInput("nsmoPH", "Number of points for the lines", value = 40)),
-                              column(4, sliderInput("alphaSchoenfeld", "Confidence Interval Opacity", min = 0, max = 1, value = 0.4, step= 0.1))
-                              
-                            ),
 
-                            fluidRow(
-                              column(4,shinyjs::colourInput("backgroundSchoenfeld", "Choose background color", value = "#FFFFFF")),
-                              column(4, selectInput("changeThemeSchoenfeld", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
-                                "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
-                                "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
-                              selected = "theme0"))
-                              
-                            )                            
-                    ) 
-                  )
-                )
-              )
+                                    fluidRow( 
+                                      
+                                      column(4,shinyjs::colourInput("curveColSchoenfeld", "Choose line color", value = "#204BD9")),
+                                      column(4,shinyjs::colourInput("colSchoenfeldResiduals", "Choose color for residuals", value = "#000000")),
+                                      column(4,shinyjs::colourInput("colSchoenfeldCI", "Choose color for CI", value = "#59A819"))
+                                    ),
+
+                                    fluidRow(
+                                      column(4,textInput("mainPanelSchoenfeld", "Main Title", value = "Schoenfeld Plot")),
+                                      column(4,textInput("xlabSchoenfeld", "X-axis Label", value = "Time")),
+                                      column(4,textInput("ylabSchoenfeld", "Y-axis Label", value = "Scaled Schoenfeld residuals for "))
+                                    ),
+
+                                    fluidRow(
+                                      column(4, sliderInput("dfSchoenfeld", "Degrees of freedom for the spline", min = 2, max = 10, value = 4, step= 1)),
+                                      column(4, numericInput("nsmoPH", "Number of points for the lines", value = 40)),
+                                      column(4, sliderInput("alphaSchoenfeld", "Confidence Interval Opacity", min = 0, max = 1, value = 0.4, step= 0.1))
+                                      
+                                    ),
+
+                                    fluidRow(
+                                      column(4,shinyjs::colourInput("backgroundSchoenfeld", "Choose background color", value = "#FFFFFF")),
+                                      column(4, selectInput("changeThemeSchoenfeld", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
+                                        "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
+                                        "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
+                                      selected = "theme0"))
+                                      
+                                    )                            
+                            ) 
+                          )
+                        )
+                      )
             ),# End for Condition 3
 
+          
+            conditionalPanel(condition="input.selectAnalysis=='4'",
 
+                tabsetPanel(
+            
+               tabPanel('Regularized Cox Regression Results',
+
+
+                h4(textOutput(outputId = "varInModelText")),
+                DT::dataTableOutput('regularCox'),
+                #verbatimTextOutput('regularCoxResult')
+                h4(textOutput(outputId = "crossValCurvePlot")),
+                highchartOutput('regularizedPlot'),
+                h4(textOutput(outputId = "varNotInModelText")),
+                DT::dataTableOutput('regularNoVariableCox')
+
+                ))
+
+            ),
 
             conditionalPanel(condition="input.selectAnalysis=='5'",
 
@@ -1019,7 +1066,7 @@ library("shinyBS")
 
                 ),
 
-               tabPanel('Plot',
+               tabPanel('Plots',
 
 
                     selectInput("selectRFPlot", "Select a plot", choices = list("Survival" = 1, "Survival OOB" = 2, "Hazard" = 3, "Hazard OOB" = 4, "Error rate" = 5, "Cox vs RSF" = 6), selected = 1), 
@@ -1088,13 +1135,9 @@ library("shinyBS")
                             )
                       ),
 
-
                       actionButton("createRSFplot", "Create plot"),
 
                       highcharter::highchartOutput('rsfPlot')
-
-
-
 
                 )
               )
