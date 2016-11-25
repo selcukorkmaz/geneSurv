@@ -1,8 +1,8 @@
 shinyServer(function(input, output, session) {
 
- library("glmnet")
- library("DT")
- library("survival")
+    library("glmnet")
+    library("DT")
+    library("survival")
     library("KMsurv")
     library("survMisc")
     source("lifeTables.R")
@@ -21,9 +21,6 @@ shinyServer(function(input, output, session) {
     library("highcharter")
     library("randomForestSRC")
     library("pec")
-
-
-
 
 
    dataM <- reactive({  ## Data input.
@@ -319,7 +316,9 @@ observe({
 
 
 observe({
-    updateSelectizeInput(session, "selectVariablerCox", choices = colnames(dataM()), selected = colnames(dataM())[3])
+    updateSelectizeInput(session, "categoricalVariablerCox", choices = colnames(dataM()), selected = colnames(dataM())[3])
+    updateSelectizeInput(session, "numericalVariablerCox", choices = colnames(dataM()), selected = colnames(dataM())[3])
+
 })
 
 
@@ -2100,17 +2099,17 @@ LmlPlot <- reactive({
 
 
 
- output$LTCurvePlot <- plotly::renderPlotly({
+# output$LTCurvePlot <- plotly::renderPlotly({
      
-     if(input$createLTPlot){
+#     if(input$createLTPlot){
          
-         plotLT(result(), lty.est = input$ltyLT, xlab = input$xlabLT,
-                 ylab = input$ylabLT, main = input$mainPanelLT)
+#         plotLT(result(), lty.est = input$ltyLT, xlab = input$xlabLT,
+#                ylab = input$ylabLT, main = input$mainPanelLT)
          
-     }
+#     }
      
    
- })
+ #})
 
   
 schoenfeldPlotReactive <- reactive({
@@ -3843,28 +3842,48 @@ regularCoxResult <- reactive({
       survivalTimerCox = input$survivalTimerCox
       survivalStatusrCox = input$statusVariablerCox
 
-      alpharCox = input$rAlpha
-
       regCoxList = list()
 
       if(input$selectAllVarsrCox){
       
             indx = !(colnames(dataM()) %in% c(input$survivalTimerCox, survivalStatusrCox))
 
+            x = data.matrix(dataM()[,indx, drop = FALSE])
+
+            y= Surv(dataM()[,survivalTimerCox], dataM()[,survivalStatusrCox])
+
       }else{
 
 
-            indx = (colnames(dataM()) %in% input$selectVariablerCox)
+            categoricalVariables = input$categoricalVariablerCox 
+            continiousVariables = input$numericalVariablerCox
+
+            newDataReg = cbind(data.frame(lapply(dataM()[, categoricalVariables, drop = FALSE], as.factor)), 
+                            data.frame(lapply(dataM()[, continiousVariables, drop = FALSE], as.numeric)), as.numeric(dataM()[,survivalTimerCox]),
+                            as.numeric(dataM()[, survivalStatusrCox]))
+
+
+          names(newDataReg)[c(ncol(newDataReg)-1,ncol(newDataReg))] = c(survivalTimerCox, survivalStatusrCox)
+
+            predictors = paste(categoricalVariables,continiousVariables, sep = "+", collapse = "+")
+
+            formula = as.formula(paste(survivalTimerCox, "~", predictors))
+
+            mm = model.matrix(formula, data = newDataReg)
+
+            newDataReg = cbind(newDataReg[,c(survivalTimerCox, survivalStatusrCox)], mm)
+
+            indx = !(colnames(newDataReg) %in% c(survivalTimerCox, survivalStatusrCox))
+
+            x = data.matrix(newDataReg[, indx])
+            y = Surv(newDataReg[,survivalTimerCox], newDataReg[,survivalStatusrCox])
+ 
 
       }
 
 
-      x = data.matrix(dataM()[,indx, drop = FALSE])
-
-      y= Surv(dataM()[,survivalTimerCox], dataM()[,survivalStatusrCox])
-
       set.seed(1234)
-      cvFit = cv.glmnet(x, y, family = "cox", alpha = alpharCox)
+      cvFit = cv.glmnet(x, y, family = "cox", alpha = input$rAlpha)
       coefficients = as.data.frame(as.matrix(coef(cvFit, s = cvFit$lambda.min)))
       coefficients$`1` = as.numeric(formatC(coefficients$`1`, digits = 3, format = "f"))
 
@@ -3920,10 +3939,9 @@ output$regularNoVariableCox <- DT::renderDataTable({
 output$regularizedPlot <- renderHighchart({
 
   if(input$runRegularized){
-     survivalTimerCox = input$survivalTimerCox
-      survivalStatusrCox = input$statusVariablerCox
 
-      alpharCox = input$rAlpha
+    survivalTimerCox = input$survivalTimerCox
+      survivalStatusrCox = input$statusVariablerCox
 
       regCoxList = list()
 
@@ -3931,20 +3949,42 @@ output$regularizedPlot <- renderHighchart({
       
             indx = !(colnames(dataM()) %in% c(input$survivalTimerCox, survivalStatusrCox))
 
+            x = data.matrix(dataM()[,indx, drop = FALSE])
+
+            y= Surv(dataM()[,survivalTimerCox], dataM()[,survivalStatusrCox])
+
       }else{
 
 
-            indx = (colnames(dataM()) %in% input$selectVariablerCox)
+            categoricalVariables = input$categoricalVariablerCox 
+            continiousVariables = input$numericalVariablerCox
+
+            newDataReg = cbind(data.frame(lapply(dataM()[, categoricalVariables, drop = FALSE], as.factor)), 
+                            data.frame(lapply(dataM()[, continiousVariables, drop = FALSE], as.numeric)), as.numeric(dataM()[,survivalTimerCox]),
+                            as.numeric(dataM()[, survivalStatusrCox]))
+
+
+          names(newDataReg)[c(ncol(newDataReg)-1,ncol(newDataReg))] = c(survivalTimerCox, survivalStatusrCox)
+
+            predictors = paste(categoricalVariables,continiousVariables, sep = "+", collapse = "+")
+
+            formula = as.formula(paste(survivalTimerCox, "~", predictors))
+
+            mm = model.matrix(formula, data = newDataReg)
+
+            newDataReg = cbind(newDataReg[,c(survivalTimerCox, survivalStatusrCox)], mm)
+
+            indx = !(colnames(newDataReg) %in% c(survivalTimerCox, survivalStatusrCox))
+
+            x = data.matrix(newDataReg[, indx])
+            y = Surv(newDataReg[,survivalTimerCox], newDataReg[,survivalStatusrCox])
+ 
 
       }
 
-
-      x = data.matrix(dataM()[,indx, drop = FALSE])
-
-      y= Surv(dataM()[,survivalTimerCox], dataM()[,survivalStatusrCox])
-
       set.seed(1234)
-      cvFit = cv.glmnet(x, y, family = "cox", alpha = alpharCox, type.measure = "deviance", nfolds = as.numeric(input$nFold))
+
+      cvFit = cv.glmnet(x, y, family = "cox", alpha = input$rAlpha, type.measure = "deviance", nfolds = as.numeric(input$nFold))
 
 
       highchart() %>% hc_exporting(enabled = TRUE, filename = "lambdaPlot") %>% 

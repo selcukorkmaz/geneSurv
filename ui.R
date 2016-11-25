@@ -333,7 +333,9 @@ library("highcharter")
 
                   conditionalPanel(condition="!input.selectAllVarsrCox",
 
-                    selectizeInput("selectVariablerCox", "Select variables", choices = NULL, multiple = TRUE)
+                    selectizeInput("categoricalVariablerCox", "Select categorical variables", choices = NULL, multiple = TRUE),
+                    selectizeInput("numericalVariablerCox", "Select continuous variables", choices = NULL, multiple = TRUE)
+
                   ),
 
                   sliderInput("rAlpha", "Penalty term", value = 1, min = 0, max = 1, step = 0.1),
@@ -1020,7 +1022,6 @@ library("highcharter")
                 tabsetPanel(
             
                tabPanel('Regularized Cox Regression Results',
-
 
                 h4(textOutput(outputId = "varInModelText")),
                 DT::dataTableOutput('regularCox'),
