@@ -20,7 +20,7 @@ shinyServer(function(input, output, session) {
     library("survminer")
     library("highcharter")
     library("randomForestSRC")
-    library("pec")
+     library("pec")
 
 
    dataM <- reactive({  ## Data input.

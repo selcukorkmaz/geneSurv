@@ -1,6 +1,6 @@
 library("shinythemes")
 library("shinyBS")
-library("highcharter")
+ library("highcharter")
 
   shinyUI(
    fluidPage(
