@@ -20,22 +20,54 @@ shinyServer(function(input, output, session) {
     library("survminer")
     library("highcharter")
     library("randomForestSRC")
-     library("pec")
+    library("pec")
+    library("knitr")
+
 
 
    dataM <- reactive({  ## Data input.
        if(input$dataInput==1){  ## Load example data.
            
-           if(input$sampleData == 1){
+           # if(input$sampleData == 1){
+           # 
+           #      data <- read.table("www/data/bladderCancer.txt", header=TRUE, sep = "\t")
+           # 
+           #      data$time <- as.numeric(data$time)
+           # }
            
-                data <- read.table("hmohiv.txt", header=TRUE, sep = "\t")
-          
-                data$time <- as.numeric(data$time)
-           }
-           
-           else if(input$sampleData == 2){
+         if(input$sampleData == 1){
                
-               data <- read.table("Rossi.txt", header=TRUE, sep = "\t")
+               data <- read.table("www/data/brainCancer.txt", header=TRUE, sep = "\t")
+
+           }
+
+          else if(input$sampleData == 3){
+               
+               data <- read.table("www/data/lungCancer.txt", header=TRUE, sep = "\t")
+
+           }
+
+          else if(input$sampleData == 4){
+               
+               data <- read.table("www/data/ovarianCancer.txt", header=TRUE, sep = "\t")
+
+           }
+
+          else if(input$sampleData == 5){
+               
+               data <- read.table("www/data/heartTransplant.txt", header=TRUE, sep = "\t")
+
+           }
+
+          else if(input$sampleData == 6){
+               
+               data <- read.table("www/data/lupusNephritis.txt", header=TRUE, sep = "\t")
+
+           }
+
+          else if(input$sampleData == 7){
+               
+               data <- read.table("www/data/primaryBiliaryCirrhosis.txt", header=TRUE, sep = "\t")
 
            }
        }
@@ -82,13 +114,13 @@ shinyServer(function(input, output, session) {
    #})
    
    observe({
-       updateSelectizeInput(session, "survivalTime", choices = colnames(dataM()), selected = colnames(dataM())[1])
+       updateSelectizeInput(session, "survivalTime", choices = colnames(dataM()), selected = NULL)
    })
    
    observe({
        
        if(input$factorVar){
-          updateSelectizeInput(session, "factor", choices = colnames(dataM()), selected = colnames(dataM())[3])
+          updateSelectizeInput(session, "factor", choices = colnames(dataM()), selected = NULL)
        }else{
            
           updateSelectizeInput(session, "factor", choices = NULL, selected = NULL)
@@ -103,7 +135,7 @@ shinyServer(function(input, output, session) {
        data_tmp <- dataM()
        if (!is.null(data_tmp)){
            updateSelectizeInput(session = session, inputId = "statusVariable",
-           choices = colnames(data_tmp), selected = colnames(data_tmp)[4])
+           choices = colnames(data_tmp), selected = NULL)
        } else {
            updateSelectizeInput(session = session, inputId = "statusVariable",
            choices = "", selected = "")
@@ -130,17 +162,17 @@ shinyServer(function(input, output, session) {
  #########################################################################################
  ################################ Observe Kaplan-Meier (start) ###########################
  observe({
-     updateSelectizeInput(session, "statusVariableKM", choices = colnames(dataM()), selected = colnames(dataM())[4])
+     updateSelectizeInput(session, "statusVariableKM", choices = colnames(dataM()), selected = NULL)
  })
  
  observe({
-     updateSelectizeInput(session, "survivalTimeKM", choices = colnames(dataM()), selected = colnames(dataM())[1])
+     updateSelectizeInput(session, "survivalTimeKM", choices = colnames(dataM()), selected = NULL)
  })
  
  observe({
      
      if(input$factorVarKM){
-         updateSelectizeInput(session, "factorKM", choices = colnames(dataM()), selected = colnames(dataM())[3])
+         updateSelectizeInput(session, "factorKM", choices = colnames(dataM()), selected = NULL)
      }else{
          
          updateSelectizeInput(session, "factoKMr", choices = NULL, selected = NULL)
@@ -153,7 +185,7 @@ shinyServer(function(input, output, session) {
  observe({
      data_tmp <- dataM()
      if (!is.null(data_tmp)){
-         updateSelectizeInput(session = session, inputId = "statusVariableKM", choices = colnames(data_tmp), selected = colnames(data_tmp)[4])
+         updateSelectizeInput(session = session, inputId = "statusVariableKM", choices = colnames(data_tmp), selected = NULL)
      } else {
          updateSelectizeInput(session = session, inputId = "statusVariableKM", choices = "", selected = "")
      }
@@ -185,7 +217,7 @@ shinyServer(function(input, output, session) {
  ################################ Observe Cox Regression (start) ###########################
 
  observe({
-     updateSelectizeInput(session, "survivalTimeCox", choices = colnames(dataM()), selected = colnames(dataM())[1])
+     updateSelectizeInput(session, "survivalTimeCox", choices = colnames(dataM()), selected = NULL)
  })
 
  #############################################################
@@ -193,7 +225,7 @@ shinyServer(function(input, output, session) {
  observe({
      data_tmp <- dataM()
      if (!is.null(data_tmp)){
-         updateSelectizeInput(session = session, inputId = "statusVariableCox", choices = colnames(data_tmp), selected = colnames(data_tmp)[4])
+         updateSelectizeInput(session = session, inputId = "statusVariableCox", choices = colnames(data_tmp), selected = NULL)
      } else {
          updateSelectizeInput(session = session, inputId = "statusVariableCox", choices = "", selected = "")
      }
@@ -217,11 +249,11 @@ shinyServer(function(input, output, session) {
 #############################################################
 
 observe({
-    updateSelectizeInput(session, "categoricalInput", choices = colnames(dataM()), selected = colnames(dataM())[3])
+    updateSelectizeInput(session, "categoricalInput", choices = colnames(dataM()), selected = NULL)
 })
 
 observe({
-    updateSelectizeInput(session, "continuousInput", choices = colnames(dataM()), selected = colnames(dataM())[2])
+    updateSelectizeInput(session, "continuousInput", choices = colnames(dataM()), selected = NULL)
 })
 
 observe({
@@ -286,14 +318,14 @@ observe({
  #########################################################################################
 
  observe({
-     updateSelectizeInput(session, "survivalTimerCox", choices = colnames(dataM()), selected = colnames(dataM())[1])
+     updateSelectizeInput(session, "survivalTimerCox", choices = colnames(dataM()), selected = NULL)
  })
 
  
  observe({
      data_tmp_rCox <- dataM()
      if (!is.null(data_tmp_rCox)){
-         updateSelectizeInput(session = session, inputId = "statusVariablerCox", choices = colnames(data_tmp_rCox), selected = colnames(data_tmp_rCox)[4])
+         updateSelectizeInput(session = session, inputId = "statusVariablerCox", choices = colnames(data_tmp_rCox), selected = NULL)
      } else {
          updateSelectizeInput(session = session, inputId = "statusVariablerCox", choices = "", selected = "")
      }
@@ -316,8 +348,8 @@ observe({
 
 
 observe({
-    updateSelectizeInput(session, "categoricalVariablerCox", choices = colnames(dataM()), selected = colnames(dataM())[3])
-    updateSelectizeInput(session, "numericalVariablerCox", choices = colnames(dataM()), selected = colnames(dataM())[3])
+    updateSelectizeInput(session, "categoricalVariablerCox", choices = colnames(dataM()), selected = NULL)
+    updateSelectizeInput(session, "numericalVariablerCox", choices = colnames(dataM()), selected = NULL)
 
 })
 
@@ -328,7 +360,7 @@ observe({
 ################################ Observe Random Survival Forest (start) ###########################
 
  observe({
-     updateSelectizeInput(session, "survivalTimeRF", choices = colnames(dataM()), selected = colnames(dataM())[1])
+     updateSelectizeInput(session, "survivalTimeRF", choices = colnames(dataM()), selected = NULL)
  })
 
  #############################################################
@@ -336,7 +368,7 @@ observe({
  observe({
      data_tmp <- dataM()
      if (!is.null(data_tmp)){
-         updateSelectizeInput(session = session, inputId = "statusVariableRF", choices = colnames(data_tmp), selected = colnames(data_tmp)[4])
+         updateSelectizeInput(session = session, inputId = "statusVariableRF", choices = colnames(data_tmp), selected = NULL)
      } else {
          updateSelectizeInput(session = session, inputId = "statusVariableRF", choices = "", selected = "")
      }
@@ -359,11 +391,11 @@ observe({
 
 
 observe({
-    updateSelectizeInput(session, "categoricalInputRF", choices = colnames(dataM()), selected = colnames(dataM())[3])
+    updateSelectizeInput(session, "categoricalInputRF", choices = colnames(dataM()), selected = NULL)
 })
 
 observe({
-    updateSelectizeInput(session, "continuousInputRF", choices = colnames(dataM()), selected = colnames(dataM())[2])
+    updateSelectizeInput(session, "continuousInputRF", choices = colnames(dataM()), selected = NULL)
 })
 
 observe({
@@ -456,7 +488,7 @@ observe({
  
  output$compTestText <- renderText({
      if (input$run && input$compTest && input$factorVar){
-         'Table 5: Comparison Test'
+         'Table 5: Comparison Tests'
      }
  })
  
@@ -475,7 +507,7 @@ observe({
  
         lt = lifeTables(survivalTime = input$survivalTime, statusVariable = input$statusVariable, status = input$status, factors= fctr, fromTime = input$from, toTime = input$to, by = input$by, lifeTable = input$lifeTable, descriptives = input$caseSummary, hr = input$hr, medianLifeTime = input$medianLifeTime, ci = input$ci,
             varianceEstimation = input$varianceEstimation, compare = input$compTest, comparisonTest = input$comparisonTest, confidenceLevel = input$confidenceLevel,
-        referenceCategory = input$refCategory, typeOfTest = "asymptotic", data = dataSet)
+        referenceCategory = input$refCategory, typeOfTest = "asymptotic", p = input$pLT, q = input$qLT, data = dataSet)
     
     
     lt
@@ -685,7 +717,7 @@ output$hrTextKM <- renderText({
 
 output$compTestTextKM <- renderText({
     if (input$runKM && input$compTestKM && input$factorVarKM){
-        'Table 5: Comparison Test'
+        'Table 5: Comparison Tests'
     }
 })
 
@@ -704,7 +736,7 @@ resultKM <- reactive({
             km = kaplanMeier (survivalTime = input$survivalTimeKM, statusVariable  = input$statusVariableKM, status = input$statusKM, factors = fctr, survivalTable = TRUE, caseSummary = input$caseSummaryKM, hr=input$hrKM,
             meanMedianSurvivalTimes = input$meanMedianSurvivalTimes, quartilesOfSurvivalTimes = FALSE, ci = input$ciKM,
             varianceEstimation = input$varianceEstimationKM, comparisonTest = input$comparisonTestKM, confidenceLevel = input$confidenceLevelKM,
-            referenceCategory = input$refCategoryKM, typeOfTest = "asymptotic", kmCurve = TRUE, data = dataSet)
+            referenceCategory = input$refCategoryKM, typeOfTest = "asymptotic", kmCurve = TRUE, p = input$pKM, q = input$qKM, data = dataSet)
 
         
         km
@@ -1832,9 +1864,6 @@ themeHazard <- reactive({
     }
 
 
-
-
-
   })
 
 
@@ -1997,9 +2026,6 @@ themeLml <- reactive({
     hc_theme_sandsignika()
     
   }
-  
-  
-  
   
   
 })
@@ -2635,9 +2661,6 @@ themeSchoenfeldLml <- reactive({
   }
   
   
-  
-  
-  
 })
 
 
@@ -2721,38 +2744,29 @@ kmPlotCoxReactive <- reactive({
   p2
   
 
+})
 
+output$phPlots <- renderHighchart({
 
+  if(input$selectPlotCox == 1 && input$runCox){
+   
+          schoenfeldPlot()
+   
+   }
 
-      
+  else if(input$selectPlotCox == 2 && input$runCox){
 
+    kmPlotCoxReactive()
 
+  }
 
+})
 
+output$str <- renderPrint({
 
- 
-      #  }
+   categoriesCox()
 
-      })
-
-
-         output$phPlots <- renderHighchart({
-
-                if(input$selectPlotCox == 1 && input$runCox){
-                    schoenfeldPlot()
-                }
-
-                else if(input$selectPlotCox == 2 && input$runCox){
-
-                    kmPlotCoxReactive()
-              }
-
-          })
-
-          output$str <- renderPrint({
-            categoriesCox()
-
-          })
+})
 
 
 ##############################################################################################
@@ -3081,7 +3095,7 @@ randomForestSurvival <- reactive({
  output$survival <- DT::renderDataTable({
 
 
-if(input$survivalResultRF && input$runRF){
+  if(input$survivalResultRF && input$runRF){
     survival = data.frame(randomForestSurvival()$survival)
 
     survival = apply(survival, 2, FUN = function(x){
@@ -3092,10 +3106,8 @@ if(input$survivalResultRF && input$runRF){
 
     survival = as.data.frame(survival)
     colnames(survival) = as.character(randomForestSurvival()$time.interest)
-  
 
-
-      datatable(survival, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+    datatable(survival, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
       dom = 'Bfrtip',
       buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
       ))
@@ -3203,8 +3215,7 @@ if(input$survivalResultRF && input$runRF){
                 ))
 
               }
-
- })
+  })
 
 
   output$variableImportance <- DT::renderDataTable({
@@ -4026,7 +4037,16 @@ output$regularizedPlot <- renderHighchart({
 #################### Regularized Cox Regression (end) ############################################
 ##############################################################################################
 
- 
+
+  #output$help<-renderUI({
+
+#        HTML(markdown::markdownToHTML(knit('help.rmd', quiet = FALSE)))
+
+
+
+ #   })
+
+
 })
 
 
