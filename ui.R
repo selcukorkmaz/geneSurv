@@ -1,10 +1,14 @@
 library("shinythemes")
 library("shinyBS")
- library("highcharter")
+library("highcharter")
+library("knitr")
+
+  #rmdfiles <- c("help.rmd")
+  #sapply(rmdfiles, knit, quiet = T)
 
   shinyUI(
    fluidPage(
-    theme = "css/mytheme.css",
+    theme =  "css/mytheme.css",
      sidebarPanel(width=3,
 
 
@@ -22,21 +26,13 @@ library("shinyBS")
 
         ),    
 
-        conditionalPanel(condition="input.tabs1=='Help'",
+        #conditionalPanel(condition="input.tabs1=='Help'"
 
            # HTML('<img src="images/help.png" width=300 height=200>'),
 
-              conditionalPanel(condition = "input.tabs1 == 'Help'",
-                h4(tags$b("Help")), 
-                a("Usage of the tool", href = "#usage"), br(),
-                a("1. Data upload", href = "#upload"), br(),
-                a("2. Analysis", href = "#analysis"), br(),
-                a("2.1. Life Table", href = "#lt"), br(),
-                a("2.2. Kaplan-Meier", href = "#km"), br(),
-                a("2.3. Cox Regression", href = "#cox")
-              )
+  
 
-        ),  
+        #),  
 
          ################################# About (end) #####################################
          ################################# Data Upload (start) #####################################
@@ -45,11 +41,11 @@ library("shinyBS")
       conditionalPanel(condition="input.tabs1=='Data Upload'",
 
           h4("Input data"),
-          radioButtons("dataInput", "", list("Upload a file" = 2, "Load example data" = 1), selected=1),
+          radioButtons("dataInput", "", list("Upload a file" = 2, "Load example data" = 1), selected=2),
 
           conditionalPanel(condition="input.dataInput=='1'",
-            h5("Load example data:"),
-            radioButtons("sampleData", "", list("Example data (Life Table and Kaplan-Meier)"=1, "Example data2 (Cox Regression)"=2), selected=1)
+            h5("Example datasets:"),
+            radioButtons("sampleData", "", list("Brain cancer data"=1, "Lung cancer data"=3, "Ovarian cancer"=4, "Heart transplant data"=5, "Lupus nephritis data"=6, "Primary biliary cirrhosis data"=7), selected=1)
            ),
 
           conditionalPanel(condition="input.dataInput=='2'",
@@ -71,7 +67,7 @@ library("shinyBS")
       conditionalPanel(condition="input.tabs1=='Analysis'",
 
 
-          selectizeInput(inputId = "selectAnalysis", label = "Select a Method", choices = c("Life Table" = 1, "Kaplan-Meier" = 2, "Cox Regression" = 3, "Regularized Cox Regression" = 4, "Random Survival Forests" = 5), selected = 4),
+          selectizeInput(inputId = "selectAnalysis", label = "Select an Analysis Method", choices = c("Life Table" = 1, "Kaplan-Meier" = 2, "Cox Regression" = 3, "Penalized Cox Regression" = 4, "Random Survival Forests" = 5), selected = 1),
 
           conditionalPanel(condition="input.selectAnalysis=='1'",
             checkboxInput(inputId = "inputs", label = tags$b("Inputs"), value = TRUE),
@@ -107,8 +103,13 @@ library("shinyBS")
 
                       selectizeInput("varianceEstimation", "Variance estimation", choices = list("Greenwood" = "greenwood", "Tsiatis" = "tsiatis"), multiple = FALSE),
 
-                      selectizeInput("comparisonTest", "Comparison test", choices = list("Log-rank" = "logRank", "Gehan-Breslow" = "gehanBreslow", "Tarone-Ware" = "taroneWare", "Peto-Peto" = "petoPeto", "Modified Peto-Peto" = "modPetoPeto", "Flemington-Harrington" = "flemingtonHarnington"), multiple = FALSE),
-
+                      #selectizeInput("comparisonTest", "Comparison test", choices = list("Log-rank" = "logRank", "Gehan-Breslow" = "gehanBreslow", "Tarone-Ware" = "taroneWare", "Peto-Peto" = "petoPeto", "Modified Peto-Peto" = "modPetoPeto", "Flemington-Harrington" = "flemingtonHarnington"), multiple = FALSE),
+                      
+                      h5(tags$b("Flemington-Harrington Weights")),
+                      fluidRow(column(4,numericInput("pLT", "p", value = 1)),
+                               column(4,numericInput("qLT", "q", value = 1))
+                      ),
+                      
                       numericInput("confidenceLevel", "Confidence level", value = 95, min = 0, max = 100),
 
                       radioButtons("refCategory", "Reference category", choices = list("First" = "first", "Last" = "last"))
@@ -135,8 +136,11 @@ library("shinyBS")
 
                   ),
                 #),
+                 #tags$head(
+                  #  tags$style(HTML('#run{background-color:green}'))
+                  #),
 
-                  actionButton(inputId = "run", label = "Run", icon = icon("play", lib = "glyphicon"))
+                  actionButton(inputId = "run",  label = "Run", icon = icon("play", lib = "glyphicon"))
 
            ),
 
@@ -167,8 +171,13 @@ library("shinyBS")
 
                   selectizeInput("varianceEstimationKM", "Variance estimation", choices = list("Greenwood" = "greenwood", "Tsiatis" = "tsiatis"), multiple = FALSE),
 
-                  selectizeInput("comparisonTestKM", "Comparison test", choices = list("Log-rank" = "logRank", "Gehan-Breslow" = "gehanBreslow", "Tarone-Ware" = "taroneWare", "Peto-Peto" = "petoPeto", "Modified Peto-Peto" = "modPetoPeto", "Flemington-Harrington" = "flemingtonHarnington"), multiple = FALSE),
-
+                  #selectizeInput("comparisonTestKM", "Comparison test", choices = list("Log-rank" = "logRank", "Gehan-Breslow" = "gehanBreslow", "Tarone-Ware" = "taroneWare", "Peto-Peto" = "petoPeto", "Modified Peto-Peto" = "modPetoPeto", "Flemington-Harrington" = "flemingtonHarnington"), multiple = FALSE),
+                  
+                  h5(tags$b("Flemington-Harrington Weights")),
+                  fluidRow(column(6,numericInput("pKM", "p", value = 1)),
+                           column(6,numericInput("qKM", "q", value = 1))
+                  ),
+                  
                   numericInput("confidenceLevelKM", "Confidence level", value = 95, min = 0, max = 100),
 
                   radioButtons("refCategoryKM", "Reference category", choices = list("First" = "first", "Last" = "last"))
@@ -477,7 +486,7 @@ library("shinyBS")
 
 	mainPanel(
 
-    navbarPage("compSurv: Complete Survival Analysis v.0.5", id="tabs1", inverse = TRUE, collapsible = TRUE, fluid = TRUE, position = "fixed-top", class("navbar navbar-inverse"),
+    navbarPage("compSurv: Complete Survival Analysis v.0.99", id="tabs1", inverse = TRUE, collapsible = TRUE, fluid = TRUE, position = "fixed-top", class("navbar navbar-inverse"),
 
  
 
@@ -510,8 +519,7 @@ library("shinyBS")
               HTML('<p align="justify"> <b> Cox regression:</b> coefficient estimates, hazard ratios, goodness of fit test, analysis of deviance, save predictions, save residuals,
                 save Martingale residuals, save Schoenfeld residuals, save dfBetas, proportional hazard assumption test, and interactive plots including Schoenfeld residual plot and Log-Minus-Log plot.</p>'),
 
-
-              HTML('<p align="justify"> All source codes are in <a href="https://github.com/selcukorkmaz/compSurv" target="_blank"><b>GitHub</b></a>. Please see the help page for more detailed information.</p>'),
+              HTML('<p align="justify"> All source codes are in <a href="https://github.com/selcukorkmaz/compSurv" target="_blank"><b>GitHub</b></a>. Please see the <a href="help.html" target="_blank"> <b>help page</b></a> for more detailed information.</p>'),
 
               HTML('<p><div align = "center"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/kmPlot.jpg" width="300" height="200" ></td><td><img src="images/schoenfeldPlot.jpg" width="300" height="200"></td><td><img src="images/lmlPlot.jpg" width="300" height="200"></td></tr></table></div></p>'),
 
@@ -1021,7 +1029,7 @@ library("shinyBS")
 
                 tabsetPanel(
             
-               tabPanel('Regularized Cox Regression Results',
+               tabPanel('Penalized Cox Regression Results',
 
                 h4(textOutput(outputId = "varInModelText")),
                 DT::dataTableOutput('regularCox'),
@@ -1147,116 +1155,14 @@ library("shinyBS")
 
           ),
 
-         tabPanel("Help",
+         #tabPanel("Help",
 
-           h4(tags$b('Usage of the tool:'), id = "usage"),
-           h5(tags$b('1. Data upload'), id = "upload"),
-           HTML('<p> Load your data set in *.txt file format using this tab.</p>'),
+            #shiny::includeMarkdown("help.md"),
+         #   HTML('<p>Please click here to reach the <a href="help.html" target="_blank"> <b>help page</b></a> </p>')
 
-          HTML('<p>  
-                  <ul>
-                    <li>Rows must represent the observations and each column must represent the variables.</li>
-                    <li>First row must be a header which indicates the variable names.</li>
-                    </ul></p>'),
+            #uiOutput('help'),
 
-          HTML('<p><div align = "justify"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/dataUpload.jpg" width="400" height="300" border = "1000" alt="" ></td><td><img src="images/dataUpload2.jpg" width="550" height="300" border = "1000" alt=""></td></tr></table></div></p>'),
-
-          br(),
-           h5(tags$b('2. Analysis'), id = "analysis"),
-            h5(tags$b('2.1. Life Table'), id = "lt"),
-            HTML('<p>In order to perform Life Table analysis,</p>'),
-
-            HTML('<p>  
-                  <ol>
-                    <li>Select the analysis method as <b>Life Table</b>.</li>
-                    <li>Select suitable variables for the analysis, such as <b>survival time, status variable, category value for status variable and factor variable, if exists.</b></li>
-                    <li>Define an appropriate <b>time interval</b> from beginning to end of study by a specific step.</li>
-                    <li>In advanced options, one can change <b>confidence interval type</b>, as log, log-log or plain, <b>variance estimation method</b>, as Greenwood or Tsiatis, <b>comparison test type</b>, as Log-rank, Gehan-Breslow, Tarone-Ware, Peto-Peto, Modifi Peto-Peto or Flemington-Harrington, <b>confidence level</b> and <b>reference category</b>, as first or last.</li>
-                    <li>Desired outputs can be selected by clicking <b>Outputs</b> checkbox. Available outputs are <b>case summary, life table, median life time, hazard ratio and comparison test</b>.</li>
-                    <li>Click <b>Run</b> button to run the analysis.</li>
-
-                  </ol></p>'),
-
-
-            HTML('<p><div align = "justify"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/lifeTable.jpg" width="400" height="300" border = "1000" alt="" ></td><td><img src="images/lifeTable2.jpg" width="550" height="300" border = "1000" alt=""></td></tr></table></div></p>'),
-          
-          h5(tags$b('A short tutorial for life table analysis.')),
-            HTML('<p>
-               <video class="centre" width="620" height="440" controls>
-                  <source src="images/lifeTable.mp4" type="video/mp4">
-                  Your browser does not support the video tag.
-                </video> 
-                </p>'),
-
-          br(),
-            h5(tags$b('2.2. Kaplan-Meier'), id = "km"),
-
-               HTML('<p>  
-                  <ol>
-                    <li>Select the analysis method as <b>Kaplan-Meier</b>.</li>
-                    <li>Select suitable variables for the analysis, such as <b>survival time, status variable, category value for status variable and factor variable, if exists.</b></li>
-                    <li>In advanced options, one can change <b>confidence interval type</b>, as log, log-log or plain, <b>variance estimation method</b>, as Greenwood or Tsiatis, <b>comparison test type</b>, as Log-rank, Gehan-Breslow, Tarone-Ware, Peto-Peto, Modifi Peto-Peto or Flemington-Harrington, <b>confidence level</b> and <b>reference category</b>, as first or last.</li>
-                    <li>Desired outputs can be selected by clicking <b>Outputs</b> checkbox. Available outputs are <b>case summary, survival table, mean and median life time, hazard ratio and comparison test</b>.</li>
-                    <li>Click <b>Run</b> button to run the analysis.</li>
-                  </ol></p>'),
-
-            HTML('<p><div align = "justify"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/km.jpg" width="500" height="300" border = "1000" alt="" ></td><td><img src="images/kmPlots2.jpg" width="450" height="300" border = "1000" alt=""></td></tr></table></div></p>'),
-            
-            HTML('<p>  
-                  <ul>
-                    <li>Two interactive plots can be created under <b>Plot</b> subtab: <b>Kaplan-Meier plot and Hazard plot</b> </li>
-                    <li>A number of options available for plot editing.</li>
-                  </ul></p>'),
-
-
-            HTML('<p><div align = "justify"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/kmPlots.jpg" width="500" height="300" border = "1000" alt="" ></td><td><img src="images/kmPlots3.jpg" width="450" height="300" border = "1000" alt=""></td></tr></table></div></p>'),
-
-            h5(tags$b('A short tutorial for Kaplan-Meier analysis.')),
-            HTML('<p>
-               <video class="centre" width="620" height="440" controls>
-                  <source src="images/kaplanMeier.mp4" type="video/mp4">
-                  Your browser does not support the video tag.
-                </video> 
-                </p>'),
-
-         
-          br(),
-            h5(tags$b('2.3. Cox Regression'), id = "cox"),
-
-                HTML('<p>  
-                  <ol>
-                    <li>Select the analysis method as <b>Cox Regression</b>.</li>
-                    <li>Select suitable variables for the analysis, such as <b>survival time, status variable, category value for status variable, and categorical and continuous predictors for the model.</b></li>
-                    <li>In advanced options, interaction terms, strata terms and time dependent covariates can be added to the model. Furthermore, once can choose model selection criteria, as AIC or p-value, model selection method, as backward, forward or stepwise, reference category, as first or last, and ties method, as Efron, Breslow or exact.</li>
-                    <li>Desired outputs can be selected by clicking <b>Outputs</b> checkbox. Available outputs are <b>coefficient estimates, hazard ratio, goodness of fit tests, analysis of deviance, predictions, residuals, Martingale residuals, Schoenfeld residuals and DfBetas</b>.</li>
-                    <li>Click <b>Run</b> button to run the analysis.</li>
-                  </ol></p>'), 
-
-            HTML('<p><div align = "justify"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/coxReg.jpg" width="500" height="300" border = "1000" alt="" ></td><td><img src="images/coxReg2.jpg" width="450" height="300" border = "1000" alt=""></td></tr></table></div></p>'),
-                HTML('<p>  
-                  <ul>
-                    <li>In order to test proportional hazard assumption: </li>
-
-                    </ul></p>'),
-              HTML('<p>  
-                  <ol>
-                    <li>A global test can be run</li>
-                    <li>interactive plots, such as Schoenfeld residual plot and Log-Minus-Log plot can be created.</li>
-
-                  </ol></p>'),
-
-            HTML('<p><div align = "justify"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/coxReg3.jpg" width="450" height="300" border = "1000" alt="" ></td><td><img src="images/coxReg4.jpg" width="500" height="300" border = "1000" alt=""></td></tr></table></div></p>'),
-
-
-            h5(tags$b('A short tutorial for Cox regression analysis.')),
-            HTML('<p>
-               <video class="centre" width="620" height="440" controls>
-                  <source src="images/coxRegression.mp4" type="video/mp4">
-                  Your browser does not support the video tag.
-                </video> 
-                </p>')
-
-         ),
+         #),
              
          tabPanel("Authors",
 #br(),
