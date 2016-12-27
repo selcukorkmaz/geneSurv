@@ -3,7 +3,7 @@
 lifeTables <- function(survivalTime, statusVariable, status, factors, fromTime = 0, toTime = 60, by = 12,
                       lifeTable = TRUE, descriptives = TRUE, hr=TRUE, medianLifeTime = FALSE, ci = "log",
                       varianceEstimation = "greenwood", compare = TRUE, comparisonTest = "logRank", confidenceLevel = 95,
-                      referenceCategory = "first", typeOfTest = "asymptotic", data = dataSet){
+                      referenceCategory = "first", typeOfTest = "asymptotic", q = 1, p = 1, data = dataSet){
   
   
   if(!is.null(survivalTime)){
@@ -233,7 +233,7 @@ lifeTables <- function(survivalTime, statusVariable, status, factors, fromTime =
     # remove(newData,envir=.GlobalEnv) # delete dat again from global env
     
 comps = ten(compareCurves)
-  comp(comps)
+  comp(comps, p = p, q = q)
   comparisonTests = as.data.frame(attr(comps, "lrt"))
 
   if(compare){
@@ -259,7 +259,7 @@ comps = ten(compareCurves)
   #}
   
   #if(comparisonTest == "flemingtonHarnington"){
-    fh = data.frame(cbind(Test = "Flemington-Harnington", Chi_square= as.numeric(formatC(comparisonTests[6,6], digits = 3, format = "f")), DF = comparisonTests[6,7], p_value= as.numeric(formatC(comparisonTests[6,8], digits = 3, format = "f")))) 
+    fh = data.frame(cbind(Test = paste0("Flemington-Harnington p = ",p, " q = ", q) , Chi_square= as.numeric(formatC(comparisonTests[6,6], digits = 3, format = "f")), DF = comparisonTests[6,7], p_value= as.numeric(formatC(comparisonTests[6,8], digits = 3, format = "f")))) 
   #}
 
   testResults = rbind.data.frame(lr, gb, tw, pp, mpp, fh)
