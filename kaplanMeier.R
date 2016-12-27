@@ -1,7 +1,7 @@
 kaplanMeier <- function(survivalTime, statusVariable, status, factors, survivalTable = TRUE, caseSummary = TRUE, hr=TRUE, 
                         meanMedianSurvivalTimes = TRUE, quartilesOfSurvivalTimes = FALSE, ci = "log", 
                         varianceEstimation = "greenwood", comparisonTest = "logRank", confidenceLevel = 95,
-                        referenceCategory = "first", typeOfTest = "asymptotic", kmCurve = TRUE, data = dataSet){
+                        referenceCategory = "first", typeOfTest = "asymptotic", kmCurve = TRUE, p= 1, q = 1, data = dataSet){
   
 fname = factors
 if(!is.null(survivalTime)){
@@ -160,7 +160,7 @@ if(!is.null(factors)){
   }else{quan2 = NULL}    
   
   comps = ten(compareCurves)
-  comp(comps)
+  comp(comps, p = p, q = q)
   comparisonTests = as.data.frame(attr(comps, "lrt"))
 
   
@@ -168,18 +168,15 @@ if(!is.null(factors)){
   #$tests$lrTests
   
   #if(comparisonTest == "logRank"){
-    lrTest = survdiff(Surv(time, statusVar) ~ factor, data = newData, rho=0)
-    lr = data.frame(cbind(Test = "Log-rank", Chi_square= as.numeric(formatC(lrTest$chisq, digits = 3, format = "f")), DF = (nrow(lrTest$var)-1)*(ncol(lrTest$var)-1), p_value= as.numeric(formatC(pchisq(lrTest$chisq, (nrow(lrTest$var)-1)*(ncol(lrTest$var)-1), lower.tail = F), digits = 3, format = "f")))) 
+    lr = data.frame(cbind(Test = "Log-rank", Chi_square= as.numeric(formatC(comparisonTests[1,6], digits = 3, format = "f")), DF = comparisonTests[1,7], p_value= as.numeric(formatC(comparisonTests[1,8], digits = 3, format = "f")))) 
   #}
   
   #if(comparisonTest == "gehanBreslow"){
-    gbTest = survdiff(Surv(time, statusVar) ~ factor, data = newData, rho=1)
-    gb = data.frame(cbind(Test = "Gehan-Breslow", Chi_square= as.numeric(formatC(gbTest$chisq, digits = 3, format = "f")), DF = (nrow(gbTest$var)-1)*(ncol(gbTest$var)-1), p_value= as.numeric(formatC(pchisq(gbTest$chisq, (nrow(gbTest$var)-1)*(ncol(gbTest$var)-1), lower.tail = F), digits = 3, format = "f")))) 
+    gb = data.frame(cbind(Test = "Gehan-Breslow", Chi_square= as.numeric(formatC(comparisonTests[2,6], digits = 3, format = "f")), DF = comparisonTests[2,7], p_value= as.numeric(formatC(comparisonTests[2,8], digits = 3, format = "f")))) 
   #}
   
   #if(comparisonTest == "taroneWare"){
-    twTest = survdiff(Surv(time, statusVar) ~ factor, data = newData, rho=1.5)
-    tw = data.frame(cbind(Test = "Tarone-Ware", Chi_square= as.numeric(formatC(twTest$chisq, digits = 3, format = "f")), DF = (nrow(twTest$var)-1)*(ncol(twTest$var)-1), p_value= as.numeric(formatC(pchisq(twTest$chisq, (nrow(twTest$var)-1)*(ncol(twTest$var)-1), lower.tail = F), digits = 3, format = "f")))) 
+    tw = data.frame(cbind(Test = "Tarone-Ware", Chi_square= as.numeric(formatC(comparisonTests[3,6], digits = 3, format = "f")), DF = comparisonTests[3,7], p_value= as.numeric(formatC(comparisonTests[3,8], digits = 3, format = "f")))) 
   #}
   
   #if(comparisonTest == "petoPeto"){
@@ -191,9 +188,8 @@ if(!is.null(factors)){
   #}
   
   #if(comparisonTest == "flemingtonHarnington"){
-    fh = data.frame(cbind(Test = "Flemington-Harrington", Chi_square= as.numeric(formatC(comparisonTests[6,6], digits = 3, format = "f")), DF = comparisonTests[6,7], p_value= as.numeric(formatC(comparisonTests[6,8], digits = 3, format = "f")))) 
+    fh = data.frame(cbind(Test = paste0("Flemington-Harnington p = ",p, " q = ", q), Chi_square= as.numeric(formatC(comparisonTests[6,6], digits = 3, format = "f")), DF = comparisonTests[6,7], p_value= as.numeric(formatC(comparisonTests[6,8], digits = 3, format = "f")))) 
   #}
-
     testResults = rbind.data.frame(lr, gb, tw, pp, mpp, fh)
 
     colnames(testResults) = c("Test", "Chi square", "df", "p value")
