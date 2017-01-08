@@ -1139,8 +1139,6 @@ A cross-validation curve can be created to investigate the relationship between 
 
 Random survival forests, an ensemble method for analysing right censored data, first introduced by <a href ="https://arxiv.org/pdf/0811.1645.pdf" target = "_blank" > Ishwaran et al, 2008</a>. RSF has several advantages over Cox regression: (i) Unlike Cox regression, RSF does not rely on proportional hazard assumption. (ii) RSF accounts for nonlinear effects and interactions for factor variables. 
 
-Life tables has been widely used in actuarial science where demographic predictions are made. 
-
 #### Usage
 
 A random survival forests analysis can be conducted by applying the following steps:

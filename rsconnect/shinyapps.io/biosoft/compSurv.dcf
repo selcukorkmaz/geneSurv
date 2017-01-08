@@ -1,9 +1,0 @@
-name: compSurv
-account: biosoft
-server: shinyapps.io
-appId: 126868
-bundleId: 573885
-url: https://biosoft.shinyapps.io/compSurv/
-when: 1475358648.665
-asMultiple: FALSE
-asStatic: FALSE
