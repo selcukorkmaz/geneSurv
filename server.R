@@ -22,6 +22,7 @@ shinyServer(function(input, output, session) {
     library("randomForestSRC")
     library("pec")
     library("knitr")
+    source("cuttOffForSurvival.R")
 
 
 
@@ -357,6 +358,7 @@ observe({
 
  ################################ Observe Regularized Cox Regression (end) #########################
  #######################################################################################
+
 ################################ Observe Random Survival Forest (start) ###########################
 
  observe({
@@ -453,6 +455,60 @@ observe({
 
 
  ################################ Observe Random Survival Forest (end) #########################
+
+
+
+
+
+#########################################################################################
+################################ Observe Optimum cutoff(start) ###########################
+#########################################################################################
+
+observe({
+  updateSelectizeInput(session, "survivalTimeCutoff", choices = colnames(dataM()), selected = NULL)
+})
+
+
+observe({
+  updateSelectizeInput(session, "selectMarkers", choices = colnames(dataM()), selected = NULL)
+})
+
+
+observe({
+  data_tmp_Cutoff <- dataM()
+  if (!is.null(data_tmp_Cutoff)){
+    updateSelectizeInput(session = session, inputId = "statusVariableCutoff", choices = colnames(data_tmp_Cutoff), selected = NULL)
+  } else {
+    updateSelectizeInput(session = session, inputId = "statusVariableCutoff", choices = "", selected = "")
+  }
+})
+
+statusCutoff <- reactive({return(input$statusVariableCutoff)})
+
+
+observe({
+  data_tmp_Cutoff<- dataM()
+  if (!is.null(data_tmp_Cutoff)){
+    idx_Cutoff <- which(colnames(data_tmp_Cutoff) %in% statusCutoff())
+    categories_Cutoff <- levels(as.factor(as.character(data_tmp_Cutoff[ ,idx_Cutoff])))
+    
+    updateSelectizeInput(session = session, inputId = "statusCutoff", choices = categories_Cutoff, selected = categories_Cutoff[2])
+  } else {
+    updateSelectizeInput(session = session, inputId = "statusCutoff", choices = "", selected = "")
+  }
+})
+
+
+
+
+################################ Observe Optimum cutoff (end) #########################
+#######################################################################################
+
+
+
+
+
+
 
 
 
@@ -4037,15 +4093,38 @@ output$regularizedPlot <- renderHighchart({
 #################### Regularized Cox Regression (end) ############################################
 ##############################################################################################
 
+ 
+##############################################################################################
+#################### Optimum cutoff (start) ############################################
+##############################################################################################
+ 
+ optimalCutoff <- reactive({
+   
+     result <- cuttOffForSurvival(markers = input$selectMarkers, survivalTime = input$survivalTimeCutoff, statusVariable = input$statusVariableCutoff,
+                     status = input$statusCutoff, compTest = "logRank" , p= input$pLTCutoff, q = input$qLTCutoff, nmin=1, 
+                     confidenceLevel=input$CLcutoff, data = dataM())
+     
+     return(result)
+ })
 
-  #output$help<-renderUI({
-
-#        HTML(markdown::markdownToHTML(knit('help.rmd', quiet = FALSE)))
-
-
-
- #   })
-
+ output$optimalCutoffResult <- DT::renderDataTable({
+   
+   if(input$runCutoff){
+     datatable(optimalCutoff(), extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+       dom = 'Bfrtip',
+       buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+     )) 
+     
+   }  
+ })
+ 
+ 
+##############################################################################################
+#################### Optimum cutoff (end) ############################################
+##############################################################################################
+ 
+ 
+ 
 
 })
 

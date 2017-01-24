@@ -259,7 +259,7 @@ comps = ten(compareCurves)
   #}
   
   #if(comparisonTest == "flemingtonHarnington"){
-    fh = data.frame(cbind(Test = paste0("Flemington-Harnington p = ",p, " q = ", q) , Chi_square= as.numeric(formatC(comparisonTests[6,6], digits = 3, format = "f")), DF = comparisonTests[6,7], p_value= as.numeric(formatC(comparisonTests[6,8], digits = 3, format = "f")))) 
+    fh = data.frame(cbind(Test = paste0("Flemington-Harnington p = ",p, " q = ", q), Chi_square= as.numeric(formatC(comparisonTests[6,6], digits = 3, format = "f")), DF = comparisonTests[6,7], p_value= as.numeric(formatC(comparisonTests[6,8], digits = 3, format = "f")))) 
   #}
 
   testResults = rbind.data.frame(lr, gb, tw, pp, mpp, fh)

@@ -67,7 +67,7 @@ library("knitr")
       conditionalPanel(condition="input.tabs1=='Analysis'",
 
 
-          selectizeInput(inputId = "selectAnalysis", label = "Select an Analysis Method", choices = c("Life Table" = 1, "Kaplan-Meier" = 2, "Cox Regression" = 3, "Penalized Cox Regression" = 4, "Random Survival Forests" = 5), selected = 1),
+          selectizeInput(inputId = "selectAnalysis", label = "Select an Analysis Method", choices = c("Kaplan-Meier" = 2, "Cox Regression" = 3, "Penalized Cox Regression" = 4, "Random Survival Forests" = 5, "Optimal Cutoff" = 6), selected = 1),
 
           conditionalPanel(condition="input.selectAnalysis=='1'",
             checkboxInput(inputId = "inputs", label = tags$b("Inputs"), value = TRUE),
@@ -290,8 +290,6 @@ library("knitr")
                             
                               ),
 
-                          
-
                             selectizeInput("modelSelection", "Model selection", choices = list("Enter" = "enter", "Backward" = "backward", "Forward" = "forward", "Stepwise" = "stepwise"), selected = "enter"),
                             numericInput("confidenceLevelCox", "Confidence level", value = 95, min = 0, max = 100),
                             radioButtons("refCategoryCox", "Reference category", choices = list("First" = "first", "Last" = "last")),
@@ -472,7 +470,33 @@ library("knitr")
                  
                  actionButton(inputId = "runRF", label = "Run", icon = icon("play", lib = "glyphicon"))
                  
-          )
+          ),
+          
+         
+          
+          conditionalPanel(condition="input.selectAnalysis=='6'",
+                selectizeInput("selectMarkers", "Select marker(s)", choices = NULL, multiple = TRUE),
+                selectizeInput("survivalTimeCutoff", "Survival time", choices = NULL, multiple = FALSE),
+                selectizeInput("statusVariableCutoff", "Select status variable", choices = NULL, multiple = FALSE),
+                selectizeInput("statusCutoff", "Select category for status variable", choices = NULL, multiple = FALSE),
+                selectizeInput("selectTestCutoff", "Select a test for cutoff", choices = c("Log-rank" = "logRank", "Gehan-Breslow" = "gehanBreslow",
+                                                                                           "Tarone-Ware" = "taroneWare", "Peto-Peto" = "petoPeto", "Modified Peto-Peto" = "modifiedPetoPeto", "Flemington-Harrington" = "flemingtonHarrington"), multiple = FALSE),
+                
+                conditionalPanel(condition = "input.selectTestCutoff == 'flemingtonHarrington'",
+    
+                    h5(tags$b("Flemington-Harrington Weights")),
+                    fluidRow(column(4,numericInput("pLTCutoff", "p", value = 1)),
+                             column(4,numericInput("qLTCutoff", "q", value = 1))
+
+                )
+                ),
+                
+                numericInput("CLcutoff",label = "Confidence level",value = 95, min=1, max=100),
+                actionButton(inputId = "runCutoff", label = "Run", icon = icon("play", lib = "glyphicon"))
+                
+                
+            )
+          
 
        )
              
@@ -1041,7 +1065,7 @@ library("knitr")
 
                 ))
 
-            ),
+            ), ## End for condition 4
 
             conditionalPanel(condition="input.selectAnalysis=='5'",
 
@@ -1150,9 +1174,22 @@ library("knitr")
 
                 )
               )
-            ) # End for Condition 5
+            ), # End for Condition 5
 
+         conditionalPanel(condition="input.selectAnalysis=='6'",
+                          
+                          tabsetPanel(
+                            
+                            tabPanel('Optimal Cutoff Results',
+                                     
+                                     DT::dataTableOutput('optimalCutoffResult')
 
+                                     
+                            ))
+                          
+         )
+         
+         
           ),
 
          #tabPanel("Help",
