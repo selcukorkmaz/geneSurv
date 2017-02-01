@@ -45,7 +45,7 @@ library("knitr")
 
           conditionalPanel(condition="input.dataInput=='1'",
             h5("Example datasets:"),
-            radioButtons("sampleData", "", list("Brain cancer data"=1, "Lung cancer data"=3, "Ovarian cancer"=4, "Heart transplant data"=5, "Lupus nephritis data"=6, "Primary biliary cirrhosis data"=7), selected=1)
+            radioButtons("sampleData", "", list("Breast cancer gene expression data"=1, "Breast cancer gene expression data 2"=2, "Breast cancer gene expression data 3"=3), selected=1)
            ),
 
           conditionalPanel(condition="input.dataInput=='2'",
@@ -476,6 +476,7 @@ library("knitr")
           
           conditionalPanel(condition="input.selectAnalysis=='6'",
                 selectizeInput("selectMarkers", "Select marker(s)", choices = NULL, multiple = TRUE),
+                #checkboxInput(inputId = "higherValues", label = "Higher values indicate risks", value = TRUE),
                 selectizeInput("survivalTimeCutoff", "Survival time", choices = NULL, multiple = FALSE),
                 selectizeInput("statusVariableCutoff", "Select status variable", choices = NULL, multiple = FALSE),
                 selectizeInput("statusCutoff", "Select category for status variable", choices = NULL, multiple = FALSE),
@@ -491,7 +492,20 @@ library("knitr")
                 )
                 ),
                 
-                numericInput("CLcutoff",label = "Confidence level",value = 95, min=1, max=100),
+                
+                
+            checkboxInput(inputId = "advancedForCutoff", label = "Advanced options", value = FALSE),
+            
+            conditionalPanel(condition = "input.advancedForCutoff",
+                             
+                             
+                selectizeInput("ciForCutoff", "Confidence interval type", choices = list("Log" = "log", "Log-Log" = "log-log", "Plain" = "plain"), multiple = FALSE),
+                
+                selectizeInput("varianceEstimationForCutoff", "Variance estimation", choices = list("Greenwood" = "greenwood", "Tsiatis" = "tsiatis"), multiple = FALSE),
+                
+                numericInput("CLcutoff",label = "Confidence level",value = 95, min=1, max=100)
+                
+              ),
                 actionButton(inputId = "runCutoff", label = "Run", icon = icon("play", lib = "glyphicon"))
                 
                 
@@ -510,36 +524,28 @@ library("knitr")
 
 	mainPanel(
 
-    navbarPage("compSurv: Complete Survival Analysis v.0.99", id="tabs1", inverse = TRUE, collapsible = TRUE, fluid = TRUE, position = "fixed-top", class("navbar navbar-inverse"),
+    navbarPage("geneSurv: Survival Analysis Tool for Genetics", id="tabs1", inverse = TRUE, collapsible = TRUE, fluid = TRUE, position = "fixed-top", class("navbar navbar-inverse"),
 
  
 
          tabPanel("About",
 
            #br(),
-           h4(tags$b('What is survival analysis?')),
+           h4(tags$b('An interactive tool for survival analysis in genomic researchs')),
 
-             HTML('<p align="justify"> Survival analysis is described as collection of statistical methods for which the response variable of interest
-              is <b><i>time until an event occurs.</i></b> In this context, the <b><i>time</i></b> can be days, week, months and years from the beginning of follow-up of an individual until an event occurs,
-                or the age of an individual when the event occurs. Moreover, the <b><i>event</i></b> can be death, disease, remission, recovery or any experience of
-                interest that may occur to an individual. A more detailed information can be found in <a href="https://books.google.com.tr/books?id=hNDkBwAAQBAJ&printsec=frontcover&dq=survival+analysis+kleinbaum&hl=tr&sa=X&redir_esc=y#v=onepage&q=survival%20analysis%20kleinbaum&f=false" target="_blank"> <b>Kleinbaum</b></a> and <a href="https://books.google.com.tr/books?id=wQlR8UNHZXgC&printsec=frontcover&dq=analysing+survival+data+from+clinical+trials&hl=tr&sa=X&ved=0ahUKEwixoLiIyMrOAhUDOhoKHStQDikQ6AEIKjAA#v=onepage&q=analysing%20survival%20data%20from%20clinical%20trials&f=false" target="_blank"> <b>Marubini and Valsecchi</b></a>.</p>'),
+             HTML('<p align="justify">This tool provides a wide range of survival analysis methods for genomic studies. The tool includes analysis methods including Kaplan-Meier, Cox regression, Penalized Cox regression and Random Survival Forests</p>'),
 
 
             #br(),
 
            h4(tags$b('An interactive tool for survival analysis!')),
 
-              HTML('<p align="justify"> Here we developed an easy-to-use, up-to-date, comprehensive and interactive web-based tool for survival analysis. This tool includes 
+              HTML('<p align="justify"> Here we developed an easy-to-use, up-to-date, comprehensive and interactive web-based tool for survival analysis. This tool includes
                 analysis procedures for life table, Kaplan-Meier and Cox regression. Each procedure includes following features:</p>'),
-
-
-           
-              HTML('<p align="justify"> <b> Life table:</b> descriptive statistics, life table, median life time, hazard ratios and comparison tests
-                including Log-rank, Gehan-Breslow, Tarone-Ware, Peto-Peto, Modified Peto-Peto, Flemington-Harrington.</p>'),
 
               HTML('<p align="justify"> <b> Kaplan-Meier:</b> descriptive statistics, survival table, mean and median life time, hazard ratios, comparison tests
                 including Log-rank, Gehan-Breslow, Tarone-Ware, Peto-Peto, Modified Peto-Peto, Flemington-Harrington, and interactive plots such as Kaplan-Meier curves and hazard plots.</p>'),
- 
+
               HTML('<p align="justify"> <b> Cox regression:</b> coefficient estimates, hazard ratios, goodness of fit test, analysis of deviance, save predictions, save residuals,
                 save Martingale residuals, save Schoenfeld residuals, save dfBetas, proportional hazard assumption test, and interactive plots including Schoenfeld residual plot and Log-Minus-Log plot.</p>'),
 
@@ -1185,7 +1191,77 @@ library("knitr")
                                      DT::dataTableOutput('optimalCutoffResult')
 
                                      
-                            ))
+                            ),
+                            
+                            tabPanel('KM Curves',
+                                     
+                                     br(),
+                                     
+                                     fluidRow(
+                                       column(4,selectizeInput(inputId = "selectMarkerForCutoff", label = "Select a marker", choices = NULL, selected = NULL)),
+                                       column(4,actionButton(inputId = "createKmCutoffPlot", label = "Create Plot", icon = icon("signal", lib = "glyphicon"))),
+                                       
+                                       
+                                       br(),
+                                       
+                                       highcharter::highchartOutput('kmCurveCutoffPlot'),
+                                       # verbatimTextOutput("printData"),
+
+                                       br(),
+                                       br(),
+                                       checkboxInput(inputId = "kmPlotOptionsForCutoffs", label = "Edit Plot", value = FALSE),
+                                       
+                                       conditionalPanel(condition = "input.kmPlotOptionsForCutoffs" ,
+                                                        
+                                                        fluidRow(
+                                                          column(4,textInput("mainPanelKMForCutoff", "Main Title", value = "Kaplan Meier Plot")),
+                                                          column(4,textInput("xlabKMForCutoff", "X-axis Label", value = "Time")),
+                                                          column(4,textInput("ylabKMForCutoff", "Y-axis Label", value = "Survival Probability"))
+                                                        ),
+                                                        
+                                                        
+                                                        # fluidRow(
+                                                        #   column(4, checkboxInput("addCensForCutoff", "Add censored cases", value = TRUE)),
+                                                        #   
+                                                        #   column(4,selectizeInput("censShapeKMForCutoff", "Select censored case shape",
+                                                        #                           choices = c("\U002B" = "plus", "\U25EF" = "circle", "\U25B3" = "triangle",  "\U25A2" = "square", "\U2573" = "cross"),
+                                                        #                           selected = "plus")),
+                                                        #   column(4,shinyjs::colourInput("censColKMForCutoff", "Choose censored cases color", value = "black"))
+                                                        # ),
+                                                        # 
+                                                        
+                                                        fluidRow(
+                                                          column(4,selectizeInput("ltyKMForCutoff", "KM curve line type",
+                                                                                  choices = c("\U2500\U2500\U2500\U2500\U2500\U2500\U2500" = "Solid",
+                                                                                              "\U2574 \U2574 \U2574 \U2574 \U2574 \U2574" = "ShortDash",
+                                                                                              "\U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7 \U00B7" = "ShortDot",
+                                                                                              "\U2574 \U00B7 \U2574 \U00B7 \U2574 \U00B7 \U2574" = "ShortDashDot",
+                                                                                              "\U2500 \U2500 \U2500 \U2500 \U2500" = "LongDash",
+                                                                                              "\U2500 \U2574 \U2500 \U2574 \U2500 \U2574" = "LongDashShortDash"),
+                                                                                  selected = "Solid")
+                                                          ),
+                                                          
+                                                          column(4,checkboxInput(inputId = "addCIForCutoff", label = "Add Confidence Interval", value = FALSE)),
+                                                          
+                                                          column(4, sliderInput("alphaForCutoff", "Confidence Interval Opacity", min = 0, max = 1, value = 0.5, step= 0.1))
+                                                        ),
+                                                        
+                                                        
+                                                        
+                                                        fluidRow(
+                                                          column(4, shinyjs::colourInput("backgroundKMForCutoff", "Plot background color", value = "white")),
+                                                          
+                                                          column(4, selectInput("changeThemeForCutoffs", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
+                                                                                                                                      "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
+                                                                                                                                      "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
+                                                                                selected = "theme0"))
+                                                        )
+                                                        
+                                       )
+                                       
+                                     ))
+                           
+                            )
                           
          )
          

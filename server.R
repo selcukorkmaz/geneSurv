@@ -38,39 +38,39 @@ shinyServer(function(input, output, session) {
            
          if(input$sampleData == 1){
                
-               data <- read.table("www/data/brainCancer.txt", header=TRUE, sep = "\t")
+               data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+
+           }
+
+          else if(input$sampleData == 2){
+               
+               data <- read.table("www/data/GSE7390.txt", header=TRUE, sep = "\t")
 
            }
 
           else if(input$sampleData == 3){
                
-               data <- read.table("www/data/lungCancer.txt", header=TRUE, sep = "\t")
+               data <- read.table("www/data/GSE11121.txt", header=TRUE, sep = "\t")
 
            }
 
-          else if(input$sampleData == 4){
-               
-               data <- read.table("www/data/ovarianCancer.txt", header=TRUE, sep = "\t")
-
-           }
-
-          else if(input$sampleData == 5){
-               
-               data <- read.table("www/data/heartTransplant.txt", header=TRUE, sep = "\t")
-
-           }
-
-          else if(input$sampleData == 6){
-               
-               data <- read.table("www/data/lupusNephritis.txt", header=TRUE, sep = "\t")
-
-           }
-
-          else if(input$sampleData == 7){
-               
-               data <- read.table("www/data/primaryBiliaryCirrhosis.txt", header=TRUE, sep = "\t")
-
-           }
+          # else if(input$sampleData == 5){
+          #      
+          #      data <- read.table("www/data/heartTransplant.txt", header=TRUE, sep = "\t")
+          # 
+          #  }
+          # 
+          # else if(input$sampleData == 6){
+          #      
+          #      data <- read.table("www/data/lupusNephritis.txt", header=TRUE, sep = "\t")
+          # 
+          #  }
+          # 
+          # else if(input$sampleData == 7){
+          #      
+          #      data <- read.table("www/data/primaryBiliaryCirrhosis.txt", header=TRUE, sep = "\t")
+          # 
+          #  }
        }
        
        else if(input$dataInput==2){  ## Upload data.
@@ -3925,15 +3925,47 @@ regularCoxResult <- reactive({
             categoricalVariables = input$categoricalVariablerCox 
             continiousVariables = input$numericalVariablerCox
 
-            newDataReg = cbind(data.frame(lapply(dataM()[, categoricalVariables, drop = FALSE], as.factor)), 
+            
+            if(!is.null(categoricalVariables) && !is.null(continiousVariables)){
+            
+              newDataReg = cbind(data.frame(lapply(dataM()[, categoricalVariables, drop = FALSE], as.factor)), 
                             data.frame(lapply(dataM()[, continiousVariables, drop = FALSE], as.numeric)), as.numeric(dataM()[,survivalTimerCox]),
                             as.numeric(dataM()[, survivalStatusrCox]))
 
+            }
+            
+            else if (!is.null(categoricalVariables) && is.null(continiousVariables)){
+              
+              newDataReg = cbind(data.frame(lapply(dataM()[, categoricalVariables, drop = FALSE], as.factor)), 
+                                 as.numeric(dataM()[,survivalTimerCox]),
+                                 as.numeric(dataM()[, survivalStatusrCox]))
+              
+            }
 
+            else if (is.null(categoricalVariables) && !is.null(continiousVariables)){
+              
+              newDataReg = cbind(data.frame(lapply(dataM()[, continiousVariables, drop = FALSE], as.numeric)), as.numeric(dataM()[,survivalTimerCox]),
+                                 as.numeric(dataM()[, survivalStatusrCox]))
+              
+            }
+            
+            
           names(newDataReg)[c(ncol(newDataReg)-1,ncol(newDataReg))] = c(survivalTimerCox, survivalStatusrCox)
 
-            predictors = paste(categoricalVariables,continiousVariables, sep = "+", collapse = "+")
-
+          
+          if(!is.null(categoricalVariables) && !is.null(continiousVariables)){
+            predictors = paste(categoricalVariables, continiousVariables, sep = "+", collapse = "+")
+          }
+          
+           if(!is.null(categoricalVariables) && is.null(continiousVariables)){
+            predictors = paste(categoricalVariables, sep = "+", collapse = "+")
+          }
+          
+           if(is.null(categoricalVariables) && !is.null(continiousVariables)){
+            predictors = paste(continiousVariables, sep = "+", collapse = "+")
+          }
+          
+          
             formula = as.formula(paste(survivalTimerCox, "~", predictors))
 
             mm = model.matrix(formula, data = newDataReg)
@@ -4026,15 +4058,44 @@ output$regularizedPlot <- renderHighchart({
             categoricalVariables = input$categoricalVariablerCox 
             continiousVariables = input$numericalVariablerCox
 
+          if(!is.null(categoricalVariables) && !is.null(continiousVariables)){
+            
             newDataReg = cbind(data.frame(lapply(dataM()[, categoricalVariables, drop = FALSE], as.factor)), 
                             data.frame(lapply(dataM()[, continiousVariables, drop = FALSE], as.numeric)), as.numeric(dataM()[,survivalTimerCox]),
                             as.numeric(dataM()[, survivalStatusrCox]))
-
-
+      
+          }  
+        
+          else if(!is.null(categoricalVariables) && is.null(continiousVariables)){
+              
+              newDataReg = cbind(data.frame(lapply(dataM()[, categoricalVariables, drop = FALSE], as.factor)), 
+                                 as.numeric(dataM()[,survivalTimerCox]),
+                                 as.numeric(dataM()[, survivalStatusrCox]))
+              
+            }    
+            
+          else if(is.null(categoricalVariables) && !is.null(continiousVariables)){
+              
+              newDataReg = cbind(data.frame(lapply(dataM()[, continiousVariables, drop = FALSE], as.factor)), 
+                                 as.numeric(dataM()[,survivalTimerCox]),
+                                 as.numeric(dataM()[, survivalStatusrCox]))
+              
+            }      
           names(newDataReg)[c(ncol(newDataReg)-1,ncol(newDataReg))] = c(survivalTimerCox, survivalStatusrCox)
 
+          
+          if(!is.null(categoricalVariables) && !is.null(continiousVariables)){
             predictors = paste(categoricalVariables,continiousVariables, sep = "+", collapse = "+")
-
+          }
+          
+          else if(!is.null(categoricalVariables) && is.null(continiousVariables)){
+            predictors = paste(categoricalVariables, sep = "+", collapse = "+")
+          }
+         
+          else if(is.null(categoricalVariables) && !is.null(continiousVariables)){
+            predictors = paste(continiousVariables, sep = "+", collapse = "+")
+          }
+          
             formula = as.formula(paste(survivalTimerCox, "~", predictors))
 
             mm = model.matrix(formula, data = newDataReg)
@@ -4098,24 +4159,298 @@ output$regularizedPlot <- renderHighchart({
 #################### Optimum cutoff (start) ############################################
 ##############################################################################################
  
+ repeatCutoff <- reactive({
+   
+   nrow(dataM())*length(input$selectMarkers)
+ })
+ 
+ 
  optimalCutoff <- reactive({
    
+   if(input$runCutoff == 0)
+   {
+     return()
+   }
+   
+   isolate({
+     if(input$runCutoff){
+       
+      withProgress(message = 'Finding optimal cutoff...',  detail = 'This may take a while...', value = 1,{
+         
      result <- cuttOffForSurvival(markers = input$selectMarkers, survivalTime = input$survivalTimeCutoff, statusVariable = input$statusVariableCutoff,
-                     status = input$statusCutoff, compTest = "logRank" , p= input$pLTCutoff, q = input$qLTCutoff, nmin=1, 
-                     confidenceLevel=input$CLcutoff, data = dataM())
+                     status = input$statusCutoff, compTest = input$selectTestCutoff, p= input$pLTCutoff, q = input$qLTCutoff, nmin=1, 
+                     confidenceLevel=input$CLcutoff, higher = TRUE, data = dataM())
      
-     return(result)
+      return(result)
+     
+     })
+     
+   }
+  })
  })
 
  output$optimalCutoffResult <- DT::renderDataTable({
    
    if(input$runCutoff){
-     datatable(optimalCutoff(), extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+     datatable(optimalCutoff()[[1]], extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
        dom = 'Bfrtip',
        buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
      )) 
      
    }  
+ })
+ 
+ 
+ themeCutoff <- reactive({
+   
+   if(input$changeThemeForCutoffs == "theme1"){
+     
+     hc_theme_538()
+     
+   }
+   
+   else if(input$changeThemeForCutoffs == "theme2"){
+     
+     hc_theme_economist()
+     
+   }
+   else if(input$changeThemeForCutoffs == "theme3"){
+     
+     hc_theme_ft()
+     
+   }
+   
+   else if(input$changeThemeForCutoffs == "theme4"){
+     
+     hc_theme_db()
+     
+   }
+   else if(input$changeThemeForCutoffs == "theme5"){
+     
+     hc_theme_flat()
+     
+   }
+   else if(input$changeThemeForCutoffs == "theme6"){
+     
+     hc_theme_flatdark()
+     
+   }
+   
+   else if(input$changeThemeForCutoffs == "theme7"){
+     
+     hc_theme_smpl()
+     
+   }
+   else if(input$changeThemeForCutoffs == "theme8"){
+     
+     hc_theme_elementary()
+     
+   }
+   else if(input$changeThemeForCutoffs == "theme9"){
+     
+     hc_theme_google()
+     
+   }
+   
+   else if(input$changeThemeForCutoffs == "theme10"){
+     
+     hc_theme_gridlight()
+     
+   }
+   else if(input$changeThemeForCutoffs == "theme11"){
+     
+     hc_theme_sandsignika()
+     
+   }
+   
+   
+ })
+ 
+ 
+ observe({
+   if(input$runCutoff){
+     updateSelectInput(session, "selectMarkerForCutoff", choices = input$selectMarkers, selected = NULL)
+   }
+ })
+ 
+ selectMarker <- reactive({
+   
+   input$selectMarkerForCutoff
+   
+ })
+
+ output$printData <-renderPrint({
+   dataList = optimalCutoff()[[2]]
+   
+   
+   data = dataList[[selectMarker()]]
+  data 
+   
+ })
+ 
+ 
+ cutoffCurves <- reactive({
+   
+   if(input$createKmCutoffPlot && input$runCutoff){
+   dataList = optimalCutoff()[[2]]
+   
+   
+   data = dataList[[selectMarker()]]
+   
+   survivalTime = "time2"
+   statusVariable  = "event2"
+   status = TRUE
+   
+   ci = input$ciForCutoff
+   varianceEstimation = input$varianceEstimationForCutoff
+   confidenceLevel = input$CLcutoff
+   
+   
+   fctr = "x2"
+   factors = fctr
+   # ci = input$ciKM
+   # varianceEstimation = input$varianceEstimationKM
+   # confidenceLevel = input$confidenceLevelKM
+   
+   
+   if(!is.null(survivalTime)){
+     survivalTime = as.matrix(data[, survivalTime, drop = FALSE])
+   }
+   
+   if(!is.null(factors)){
+     factors = as.factor(data[, factors])
+   }
+   
+   if(!is.null(factors)){
+     factorsName = data[, factors, drop = FALSE]
+   }
+   
+   if(!is.null(statusVariable)){
+     statusVariable = data[, statusVariable]
+     
+   }
+   
+   if(!is.null(status)){
+     if(is.numeric(status)){status = as.numeric(status)}else{status = as.factor(status)}
+   }
+   
+   if(!is.null(factors)){
+     newData = data.frame(id =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime,
+                          statusVar=statusVariable,factor = factors)
+     newData = newData[complete.cases(newData),]
+     colnames(newData) = c("id","time","statusVar", "factor")
+     
+   }else{
+     
+     newData = data.frame(id =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime,
+                          statusVar=statusVariable)
+     newData = newData[complete.cases(newData),]
+     colnames(newData) = c("id", "time", "statusVar")
+     
+   }
+   
+   newData$statusVar = newData$statusVar%in%status
+   
+   
+   #data[,input$survivalTimeKM] = as.numeric(data[,input$survivalTimeKM])
+   #data[,input$factorVarKM] = as.factor(data[,input$factorVarKM])
+   
+   
+   if(!is.null(fctr)){
+     compareCurves <- survfit(Surv(time, statusVar == TRUE) ~ factors, data = newData, conf.type = ci, error = varianceEstimation, conf.int = confidenceLevel/100)
+     
+     
+     # for(i in 1:length(names(compareCurves$strata))) {
+     #   
+     #   names(compareCurves$strata)[i] = gsub("factors", input$factorKM, names(compareCurves$strata)[i])
+     #   
+     # }
+     
+   }else{
+     compareCurves <- survfit(Surv(time, statusVar == TRUE) ~ 1, data = newData, conf.type = ci, error = varianceEstimation, conf.int = confidenceLevel/100)
+   }
+   
+   return(compareCurves)
+   }
+   
+ })
+ 
+ kmCutoffPlot <- reactive({
+   
+   if(input$createKmCutoffPlot && input$runCutoff){ 
+   fctr = "x2"
+   enabledLegend = TRUE
+   
+   is.even <- function(x) x %% 2 == 0
+   
+   ranges = input$addCIForCutoff
+   
+   p = hchart(cutoffCurves(), ranges = ranges, type = "line", markTimes = FALSE, symbol = input$censShapeKMForCutoff, markerColor = input$censColKMForCutoff, 
+              animation = TRUE, rangesOpacity = input$alphaForCutoff)# %>% hc_colors(cols)#, xAxis = list(crosshair = list(width = 1, color = "#000")))
+   
+   if(ranges){
+     if(!is.null(fctr)){
+       
+       for(i in 1:length(p$x$hc_opts$series)){
+         
+         if(is.even(i)){
+           p$x$hc_opts$series[[i]]$name = "CI (95%)"
+           
+         }
+         
+       }
+     }else{
+       
+       p$x$hc_opts$series[[2]]$name = "CI (95%)"
+       
+       
+     }
+   }
+   
+   
+   
+   if(input$changeThemeForCutoffs == "theme0"){
+     
+     p2 = p %>% hc_exporting(enabled = TRUE, filename = "plot") %>% 
+       hc_title(text = input$mainPanelKMForCutoff) %>%  
+       hc_xAxis(title = list(text = input$xlabKMForCutoff), tickInterval=NULL, tickLength = 5, lineWidth = 1)  %>%  
+       hc_yAxis(title = list(text = input$ylabKMForCutoff), lineWidth = 1, tickLength = 5, tickWidth= 1, labels = list(format = "{value:.2f}")) %>% 
+       #hc_colors("#440154") %>%
+       hc_chart(backgroundColor = input$backgroundKMForCutoff, zoomType = "xy") %>% 
+       hc_legend(enabled = enabledLegend) %>% 
+       hc_plotOptions(line = list(dashStyle = input$ltyKMForCutoff), area = list(zIndex = 15), series = list(enableMouseTracking = TRUE)) %>% 
+       hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 3, followTouchMove = FALSE, headerFormat = "<b>Time</b>: {point.key} <br>")#, pointFormat = "{series.name}: {point.y}")
+     
+     
+   }else{
+     
+     p2 = p %>% hc_exporting(enabled = TRUE, filename = "plot") %>% 
+       hc_title(text = input$mainPanelKMForCutoff) %>%  
+       hc_xAxis(title = list(text = input$xlabKMForCutoff), tickInterval=NULL, tickLength = 5, lineWidth = 1)  %>%  
+       hc_yAxis(title = list(text = input$ylabKMForCutoff), lineWidth = 1, tickLength = 5, tickWidth= 1, labels = list(format = "{value:.2f}")) %>% 
+       #hc_colors("#440154") %>%
+       hc_add_theme(themeCutoff()) %>%
+       hc_chart(backgroundColor = input$backgroundKMForCutoff, zoomType = "xy") %>% 
+       hc_legend(enabled = enabledLegend) %>% 
+       hc_plotOptions(line = list(dashStyle = input$ltyKMForCutoff), area = list(zIndex = 15), series = list(enableMouseTracking = TRUE)) %>% 
+       hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 3, followTouchMove = FALSE, headerFormat = "<b>Time</b>: {point.key} <br>")#, pointFormat = "{series.name}: {point.y}")
+   }
+   p2
+   
+   }
+   
+ })
+ 
+ 
+ 
+ output$kmCurveCutoffPlot <- highcharter::renderHighchart({
+   
+   if(input$createKmCutoffPlot && input$runCutoff){
+     
+     
+     kmCutoffPlot()
+     
+   }
  })
  
  

@@ -39,132 +39,7 @@ This tool requires a dataset in `*.txt` format, which is seperated by `comma`, `
 
 ## 2. Analysis Methods
 
-### 2.1. Life Table
-
-#### Concept
-
-Life tables has been widely used in actuarial science where demographic predictions are made. This method is used to estimate the survival probabilities and hazard ratios for a cohort group, which is followed-up for a certain time period. It usually applies to cross-sectional data from a large population. For more detailed information please see <a href ="http://onlinelibrary.wiley.com/book/10.1002/0471272612" target = "_blank" > Newman (2003)</a>.    
-
-
-#### Variables
-
-* `Survival time`: Time until an event occurs (i.e. days, weeks, months, years)
-* `Status variable`: The event (i.e. death, disease, remission, recovery)
-* `Category value for status variable`: Category value of the event of interest (i.e. 1, yes)
-* `Factor variable`: A categorical variable which indicates different study groups (i.e. treatment, gender)
-
-#### Usage
-
-A life table can be constructed for a cohort group using the following steps: 
-
-1. Select the analysis method as `Life Table` from `Analysis` tab.
-2. Select suitable variables for the analysis, such as `survival time`, `status variable`, `category value for status variable` and `factor variable`, if exists.
-3. Define an appropriate time interval from beginning to end of study by a specific step.
-4. In advanced options, one can change `confidence interval type` as log, log-log or plain, `variance estimation method` as Greenwood or Tsiatis and `reference category` as first or last.
-5. Click `Run` button to run the analysis.
-
-<img src="images/lifeTableHelp.jpg" alt="Life table help" align="middle" style="width:800px; height:450px;"/>
-
-
-#### Outputs
-*Desired outputs can be selected by clicking Outputs checkbox. Available outputs are;* 
-
-
-```{r lifeTable, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE, include=FALSE}
-setwd("~/Dropbox/GSD/Studies/Web-Tools(Devel)/compSurv/")
-
-library("survival")
-library("KMsurv")
-library("survMisc")
-source("lifeTables.R")
-
-data <- read.table("www/data/bladderCancer.txt", header=TRUE, sep = "\t")
-
-lt = lifeTables(survivalTime = "time", statusVariable = "status", status = 1, factors= "group", fromTime = 0, toTime = 60, by = 10, lifeTable = TRUE, descriptives = TRUE, hr = TRUE, medianLifeTime = TRUE, data = data)
-```
-
-
-
-##### a. Case summary
-
-Descriptive statistics, sample size (`n`), number of event (`n of event`), percent of event (`% of event`), number of censored cases (`n of censor`) and percent of censored cases (`% of censor`), can be obtained. 
-
-
-```{r lifeTableDescriptives, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE, include=TRUE}
-      desc = lt$tableResult$caseSummary
-      descs = do.call(rbind.data.frame, desc)
-      DT::datatable(descs, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
-  dom = 'Bfrtip',
-  buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
-     ))
-```
-
-
-
-#####b. Life table
-
-A life table can be created. First column in the table represents factor group and number of interval (i.e. 1.2 means second time interval in the first factor group, likewise 2.1 means first time interval in the second group). Second column is `interval time`, third column gives number of subjects at the beginning of the  time interval, fourth column is the number of withdraws at the beginning of the  time interval, fifth column represents the number of subjects at risk at the beginning of the  time interval, sixth column is the number of events at the beginning of the  time interval, seventh column is the probability of terminating during the time interval, eighth column is the probability of surviving in the time interval and nineth column is the cumulative probability of surviving at the beginning of the time interval.  
-
-```{r lifeTable2, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
-     ltResult = lt$testResult$lifeTable
-     ltResults = do.call(rbind.data.frame, ltResult)
-
-      DT::datatable(ltResults, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
-  dom = 'Bfrtip',
-  buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
-     ))
-```
-
-
-
-#####c. Median life time
-
-Median life time can be calculated for each factor group. 
-
-```{r medianLifeTime, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
-     mlt = lt$tableResult$medianLifeTime
-     mltResults = do.call(rbind.data.frame, mlt)
-
-      DT::datatable(mltResults, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
-  dom = 'Bfrtip',
-  buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
-     ))
-```
-
-
-
-#####d. Hazard ratio
-
-Hazard ratios can be computed for each factor group and for each time interval. First and second columns are interpreted as in the life table. Third column gives the hazard ratios for each time interval in each factor group, while fourth column gives the respective standard errors for each hazard ratio estimation. Fifth and sixth columns represents the lower and the upper limits for each hazard ratio estimation for each time interval in each factor group.
-
-```{r hazardRatioLifeTable, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
-     hrResult = lt$testResult$hazardRatio
-     hrResults = do.call(rbind.data.frame, hrResult)
-
-      DT::datatable(hrResults, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
-  dom = 'Bfrtip',
-  buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
-     ))
-```
-
-
-
-#####e. Comparison tests
-
-Six different comparison tests can be calculated for testing the differences in survival probability estimations between factor groups. 
-
-```{r comparisonTestsLifeTable, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
-     compTestResult = lt$testResult$testResults
-
-      DT::datatable(compTestResult, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
-  dom = 'Bfrtip',
-  buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
-     ))
-```
-
-
-
-### 2.2. Kaplan-Meier
+### 2.1. Kaplan-Meier
 
 #### Concept
 
@@ -202,9 +77,9 @@ library("survMisc")
 source("kaplanMeier.R")
 library("highcharter")
 
-data <- read.table("www/data/bladderCancer.txt", header=TRUE, sep = "\t")
+data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
 
-km = kaplanMeier (survivalTime = "time", statusVariable = "status", status = 1, factors= "group", survivalTable = TRUE, data = data)
+km = kaplanMeier (survivalTime = "dmfs_time", statusVariable = "dmfs_event", status = 1, factors= "ER_IHC", survivalTable = TRUE, data = data)
 
 ```
 
@@ -508,7 +383,7 @@ p %>% hc_title(text = "Log-Minus-Log Plot") %>%
 
 
 
-### 2.3. Cox Regression
+### 2.2. Cox Regression
   
 #### Concept
 
@@ -553,7 +428,7 @@ setwd("~/Dropbox/GSD/Studies/Web-Tools(Devel)/compSurv/")
 
 data <- read.table("www/data/brainCancer.txt", header=TRUE, sep = "\t")
 
- cox = coxRegression(survivalTime = "time", categoricalInput = "group", continuousInput = "age",                                statusVariable = "status", status = 1, displayDescriptives = TRUE,                                        displayCoefficientEstimates = TRUE, displayModelFit = TRUE, hazardRatio = TRUE,                            goodnessOfFitTests = TRUE, analysisOfDeviance = TRUE, ties = "efron", data = data)  
+ cox = coxRegression(survivalTime = "time", categoricalInput = "group", continuousInput = "age", statusVariable = "status", status = 1, displayDescriptives = TRUE,                       displayCoefficientEstimates = TRUE, displayModelFit = TRUE, hazardRatio = TRUE,               goodnessOfFitTests = TRUE, analysisOfDeviance = TRUE, ties = "efron", data = data)  
 
 ```
 
@@ -1008,7 +883,7 @@ p %>% hc_exporting(enabled = TRUE, filename = "plot") %>%
 
 
 
-### 2.4. Penalized Cox Regression
+### 2.3. Penalized Cox Regression
 
 #### Concept
 
@@ -1133,7 +1008,7 @@ A cross-validation curve can be created to investigate the relationship between 
 
 
 
-### 2.5. Random Survival Forests
+### 2.4. Random Survival Forests
 
 #### Concept
 

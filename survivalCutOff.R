@@ -13,7 +13,7 @@ cuttOffForSurvival(markers, survivalTime, statusVariable, status, compTest = "fl
                         confidenceLevel=95, data = data)
 
 
-cuttOffForSurvival <- function(markers, survivalTime, statusVariable, status, compTest = "logRank", p= 1, q = 1, nmin=1, 
+cuttOffForSurvival <- function(markers, survivalTime, statusVariable, status, compTest = "logRank", method = "significance", p= 1, q = 1, nmin=1, 
                                confidenceLevel=95, data = data){
   # cat(paste("Optimizing cutoff using method survival", method, sep="_"))
   
@@ -70,76 +70,155 @@ cuttOffForSurvival <- function(markers, survivalTime, statusVariable, status, co
         Y[j, 4] <- exp(coef[1] + z * coef[3])
         
         
+        
+        
         if(compTest == "logRank"){
+          
           newData2 = cbind.data.frame("x2" = x,"time2" = time, "event2" = event)
           test <- coxph(Surv(time2, event2) ~ x2, data = newData2)
           comps <- ten(test)
           comp(comps)
+          
           comparisonTests = as.data.frame(attr(comps, "lrt"))
+          
           Y[j, 9] <- comparisonTests[1,6]
           Y[j, 10] <- comparisonTests[1,8]
+          
+          fit <- summary(survfit(y ~ x), rmean=endtime)
+          tab <- fit$table
+          index.low <- grep(0, rownames(tab))
+          Y[j, 5] <- tab[index.low, "*rmean"]
+          Y[j, 6] <- tab[index.low, "*se(rmean)"]
+          index.high <- grep(1, rownames(tab)) 
+          Y[j, 7] <- tab[index.high, "*rmean"]
+          Y[j, 8] <- tab[index.high, "*se(rmean)"]
+          
+          
         }
         
         if(compTest == "gehanBreslow"){
+          
           newData2 = cbind.data.frame("x2" = x,"time2" = time, "event2" = event)
           test <- coxph(Surv(time2, event2) ~ x2, data = newData2)
           comps <- ten(test)
           comp(comps)
+          
           comparisonTests = as.data.frame(attr(comps, "lrt"))
+          
           Y[j, 9] <- comparisonTests[2,6]
           Y[j, 10] <- comparisonTests[2,8]
+          
+          fit <- summary(survfit(y ~ x), rmean=endtime)
+          tab <- fit$table
+          index.low <- grep(0, rownames(tab))
+          Y[j, 5] <- tab[index.low, "*rmean"]
+          Y[j, 6] <- tab[index.low, "*se(rmean)"]
+          index.high <- grep(1, rownames(tab)) 
+          Y[j, 7] <- tab[index.high, "*rmean"]
+          Y[j, 8] <- tab[index.high, "*se(rmean)"]
+          
+          
         }
         
         if(compTest == "taroneWare"){
+          
           newData2 = cbind.data.frame("x2" = x,"time2" = time, "event2" = event)
           test <- coxph(Surv(time2, event2) ~ x2, data = newData2)
           comps <- ten(test)
           comp(comps)
+          
           comparisonTests = as.data.frame(attr(comps, "lrt"))
+          
           Y[j, 9] <- comparisonTests[3,6]
           Y[j, 10] <- comparisonTests[3,8]
+          
+          fit <- summary(survfit(y ~ x), rmean=endtime)
+          tab <- fit$table
+          index.low <- grep(0, rownames(tab))
+          Y[j, 5] <- tab[index.low, "*rmean"]
+          Y[j, 6] <- tab[index.low, "*se(rmean)"]
+          index.high <- grep(1, rownames(tab)) 
+          Y[j, 7] <- tab[index.high, "*rmean"]
+          Y[j, 8] <- tab[index.high, "*se(rmean)"]
+          
+          
         }
         
         
         if(compTest == "petoPeto"){
+          
           newData2 = cbind.data.frame("x2" = x,"time2" = time, "event2" = event)
           test <- coxph(Surv(time2, event2) ~ x2, data = newData2)
           comps <- ten(test)
           comp(comps)
+          
           comparisonTests = as.data.frame(attr(comps, "lrt"))
+          
           Y[j, 9] <- comparisonTests[4,6]
           Y[j, 10] <- comparisonTests[4,8]
+          
+          fit <- summary(survfit(y ~ x), rmean=endtime)
+          tab <- fit$table
+          index.low <- grep(0, rownames(tab))
+          Y[j, 5] <- tab[index.low, "*rmean"]
+          Y[j, 6] <- tab[index.low, "*se(rmean)"]
+          index.high <- grep(1, rownames(tab)) 
+          Y[j, 7] <- tab[index.high, "*rmean"]
+          Y[j, 8] <- tab[index.high, "*se(rmean)"]
+          
+          
         }
         
         if(compTest == "modifiedPetoPeto"){
+          
           newData2 = cbind.data.frame("x2" = x,"time2" = time, "event2" = event)
           test <- coxph(Surv(time2, event2) ~ x2, data = newData2)
           comps <- ten(test)
           comp(comps)
+          
           comparisonTests = as.data.frame(attr(comps, "lrt"))
+          
           Y[j, 9] <- comparisonTests[5,6]
           Y[j, 10] <- comparisonTests[5,8]
+          
+          fit <- summary(survfit(y ~ x), rmean=endtime)
+          tab <- fit$table
+          index.low <- grep(0, rownames(tab))
+          Y[j, 5] <- tab[index.low, "*rmean"]
+          Y[j, 6] <- tab[index.low, "*se(rmean)"]
+          index.high <- grep(1, rownames(tab)) 
+          Y[j, 7] <- tab[index.high, "*rmean"]
+          Y[j, 8] <- tab[index.high, "*se(rmean)"]
+          
+          
         }
         
         if(compTest == "flemingtonHarrington"){
+          
           newData2 = cbind.data.frame("x2" = x,"time2" = time, "event2" = event)
           test <- coxph(Surv(time2, event2) ~ x2, data = newData2)
           comps <- ten(test)
           comp(comps, p = p, q = q)
+          
           comparisonTests = as.data.frame(attr(comps, "lrt"))
-          Y[j, 9] <- comparisonTests[6,6]
-          Y[j, 10] <- comparisonTests[6,8]
+          
+          Y[j, 9] <- comparisonTests[1,6]
+          Y[j, 10] <- comparisonTests[1,8]
+          
+          fit <- summary(survfit(y ~ x), rmean=endtime)
+          tab <- fit$table
+          index.low <- grep(0, rownames(tab))
+          Y[j, 5] <- tab[index.low, "*rmean"]
+          Y[j, 6] <- tab[index.low, "*se(rmean)"]
+          index.high <- grep(1, rownames(tab)) 
+          Y[j, 7] <- tab[index.high, "*rmean"]
+          Y[j, 8] <- tab[index.high, "*se(rmean)"]
+          
+          
         }
         
         
-        fit <- summary(survfit(y ~ x), rmean=endtime)
-        tab <- fit$table
-        index.low <- grep(0, rownames(tab))
-        Y[j, 5] <- tab[index.low, "*rmean"]
-        Y[j, 6] <- tab[index.low, "*se(rmean)"]
-        index.high <- grep(1, rownames(tab)) 
-        Y[j, 7] <- tab[index.high, "*rmean"]
-        Y[j, 8] <- tab[index.high, "*se(rmean)"]
+        
       }
       else Y[j, 10] <- 2
     }
@@ -150,7 +229,7 @@ cuttOffForSurvival <- function(markers, survivalTime, statusVariable, status, co
       rownames(Y)[index.optimal] <- "optimal"
     }
     index.p <- which(colnames(Y) == "p")
-    colnames(Y)[index.p] <- paste("p", surv.test, sep="_")
+    colnames(Y)[index.p] <- "p_value"
     
     optimalCutoffs[m,] <- formatC(Y[rownames(Y) == "optimal",], digits = 3, format = "f")
     
