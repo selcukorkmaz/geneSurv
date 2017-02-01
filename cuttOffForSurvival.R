@@ -2,6 +2,8 @@ cuttOffForSurvival <- function(markers, survivalTime, statusVariable, status, co
                                confidenceLevel=95, higher = TRUE, data = data){
   # cat(paste("Optimizing cutoff using method survival", method, sep="_"))
   
+  
+  
   markerData = data[,markers, drop = F]
   survivalTimeData = data[,survivalTime, drop = F]
   statusVariableData = data[, statusVariable, drop = F]

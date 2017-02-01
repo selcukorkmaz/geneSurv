@@ -3,6 +3,7 @@ kaplanMeier <- function(survivalTime, statusVariable, status, factors, survivalT
                         varianceEstimation = "greenwood", comparisonTest = "logRank", confidenceLevel = 95,
                         referenceCategory = "first", typeOfTest = "asymptotic", kmCurve = TRUE, p= 1, q = 1, data = dataSet){
   
+  
 fname = factors
 if(!is.null(survivalTime)){
   survivalTime = as.matrix(data[, survivalTime, drop = FALSE])

@@ -7,7 +7,8 @@ status = 1
 # cutoff <- cutoff.survival(marker, time, event, nmin = 1)
 #                           
 # kaplanMeier(survivalTime = "time", statusVariable = "status", status = 1, factors = NULL, data = data)  
-#     
+
+     
 
 cuttOffForSurvival(markers, survivalTime, statusVariable, status, compTest = "flemingtonHarrington", p= 0, q = 0, nmin=1, 
                         confidenceLevel=95, data = data)

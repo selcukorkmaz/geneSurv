@@ -1,6 +1,7 @@
 plotSchoenfeld <- function(x, resid=FALSE, se=TRUE, df=4, nsmo=40, ltyest=1, ltyci = 3, col=1, lwd=1) 
 {
   
+  
   ## adapted from survival::plot.cox.zph
   
   lty = ltyest

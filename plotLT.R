@@ -3,6 +3,7 @@ plotLT <- function(x, y=NULL, surv.col = 'gg.def', lty.est = 1,
                     ylab = 'Cumulative Survival Probability', main = '', ...){
 
 
+
   group = NULL; surv = NULL
 
   s2 = x$testResult$lifeTable

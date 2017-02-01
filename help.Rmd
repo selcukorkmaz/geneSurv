@@ -35,7 +35,7 @@ This tool requires a dataset in `*.txt` format, which is seperated by `comma`, `
 
 <img src="images/dataUpload.pdf" alt="Data upload" align="middle" style="width:800px; height:200px;"/>
 
-<img src="images/dataUploadHelp.jpg" alt="Data upload help" align="middle" style="width:800px; height:250px;"/>
+<img src="images/dataUploadHelp.jpg" alt="Data upload help" align="middle" style="width:800px; height:251px;"/>
 
 ## 2. Analysis Methods
 

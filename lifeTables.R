@@ -6,6 +6,7 @@ lifeTables <- function(survivalTime, statusVariable, status, factors, fromTime =
                       referenceCategory = "first", typeOfTest = "asymptotic", q = 1, p = 1, data = dataSet){
   
   
+  
   if(!is.null(survivalTime)){
     survivalTime = as.matrix(data[, survivalTime, drop = FALSE])
     survivalTime = apply(survivalTime, 2, as.numeric)

@@ -10,6 +10,7 @@ alpha = 0.05
 beta = 0.2
 
 
+
 sigma_hazardRate1 = (hazardRate1^2)*(1+(exp(-hazardRate1*T)-exp(-hazardRate1*(T+T0)))/hazardRate1*T0)^(-1)
 sigma_hazardRate2 = (hazardRate2^2)*(1+(exp(-hazardRate2*T)-exp(-hazardRate2*(T+T0)))/hazardRate2*T0)^(-1)
 

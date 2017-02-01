@@ -17,6 +17,7 @@ getDescriptiveResultsCoxRegression <- function(obj, variable, group.var = NULL,
 
 
 
+
   if (!is.factor(obj[ ,group.var]) && !is.null(group.var)){
     return("Warning: Only categorical variables are acceptable as a grouping variable.")
   }

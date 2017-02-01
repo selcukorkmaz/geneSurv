@@ -7,6 +7,7 @@ stepwise <- function(full.model, initial.model, alpha.to.enter, alpha.to.leave) 
   formula = paste0(dependent, " ~ ", predictors)
   full = glm(formula = formula, data = df2, family = binomial(link="logit"))
   
+  
   #full <- glm(full.model);  # fit the full model
   msef <- (summary(full)$sigma)^2;  # MSE of full model
   n <- length(full$residuals);  # sample size
