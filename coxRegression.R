@@ -6,7 +6,6 @@ coxRegression <- function(survivalTime, categoricalInput, continuousInput, statu
                           storeSchoenfeldResiduals = FALSE, storeDfBetas = FALSE, CoxPH = TRUE, multipleID = FALSE, data = dataSet){
   
   
-  
   if(!is.null(survivalTime)){
     survivalTime = as.matrix(data[, survivalTime, drop = FALSE])
     survivalTime = apply(survivalTime, 2, as.numeric)
