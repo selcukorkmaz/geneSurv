@@ -1038,15 +1038,15 @@ output$comparisonTestResultsKM <- DT::renderDataTable({
 #############################################################################################
 ###################### Cox Regression (start) #################################################
 
-output$displaySummaryCox <- renderText({
-  if(!is.null(input$categoricalInput) || !is.null(input$continuousInput)){
-
-    if (input$runCox){
-        'Model Summary'
-    }
-
-  }  
-})
+# output$displaySummaryCox <- renderText({
+#   if(!is.null(input$categoricalInput) || !is.null(input$continuousInput)){
+# 
+#     if (input$runCox){
+#         'Model Summary'
+#     }
+# 
+#   }  
+# })
 
 
 output$displayCoefficientEstimatesCox <- renderText({
@@ -1258,13 +1258,13 @@ resultCox <- reactive({
 #})
 
 
-output$summaryCox <- renderPrint({
-
-      if(input$runCox){
-        summary <- resultCox()$testResult$ModelSummaryList
-        summary
-      }else{summary = NULL}
-  })
+# output$summaryCox <- renderPrint({
+# 
+#       if(input$runCox){
+#         summary <- resultCox()$testResult$ModelSummaryList
+#         summary
+#       }else{summary = NULL}
+#   })
 
 
 displayCoefficientEstimatesReactive <- reactive({

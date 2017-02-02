@@ -337,7 +337,7 @@ library("knitr")
                   selectizeInput("statusrCox", "Select category for status variable", choices = NULL, multiple = FALSE),
 
                   h5(tags$b("Variables for selection")),  
-                  checkboxInput("selectAllVarsrCox", "Select All Variables", value = TRUE),
+                  checkboxInput("selectAllVarsrCox", "Select Custom Variables", value = TRUE),
 
                   conditionalPanel(condition="!input.selectAllVarsrCox",
 
@@ -875,7 +875,7 @@ library("knitr")
 
                             #verbatimTextOutput("str"),
                             h4(textOutput(outputId = "displaySummaryCox")),
-                            verbatimTextOutput("summaryCox"),
+                            # verbatimTextOutput("summaryCox"),
 
                             h4(textOutput(outputId = "displayCoefficientEstimatesCox")),
                             DT::dataTableOutput('displayCoefficientEstimatesResult'),
