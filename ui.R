@@ -61,7 +61,7 @@ library("knitr")
            ),
           
           actionButton(inputId = "helpDataUpload", label = "Help", icon = icon("question-sign", lib = "glyphicon"),
-                       onclick ="window.open('/help/dataUpload.html', '_blank')")
+                       onclick ="window.open('help/dataUpload.html', '_blank')")
           
 
         ),
@@ -213,7 +213,7 @@ library("knitr")
 
             
             fluidRow(column(4,actionButton(inputId = "helpKaplanMeier", label = "Help", icon = icon("question-sign", lib = "glyphicon"),
-                                           onclick ="window.open('/help/kaplanMeier.html', '_blank')")),
+                                           onclick ="window.open('help/kaplanMeier.html', '_blank')")),
                      column(4,actionButton(inputId = "runKM", label = "Run", icon = icon("play", lib = "glyphicon"))))
             
             
@@ -333,7 +333,7 @@ library("knitr")
 
 
             fluidRow(column(4,actionButton(inputId = "helpCoxRegression", label = "Help", icon = icon("question-sign", lib = "glyphicon"),
-                                           onclick ="window.open('/help/coxRegression.html', '_blank')")),
+                                           onclick ="window.open('help/coxRegression.html', '_blank')")),
                      column(4,actionButton(inputId = "runCox", label = "Run", icon = icon("play", lib = "glyphicon"))))
             
         
@@ -370,7 +370,7 @@ library("knitr")
               
 
                   fluidRow(column(4,actionButton(inputId = "helpCoxRegression", label = "Help", icon = icon("question-sign", lib = "glyphicon"),
-                                                 onclick ="window.open('/help/penalizedCoxRegression.html', '_blank')")),
+                                                 onclick ="window.open('help/penalizedCoxRegression.html', '_blank')")),
                            column(4,actionButton(inputId = "runRegularized", label = "Run", icon = icon("play", lib = "glyphicon"))))
                   
                   
@@ -492,7 +492,7 @@ library("knitr")
                  ),
                  
                  fluidRow(column(4,actionButton(inputId = "helpCoxRegression", label = "Help", icon = icon("question-sign", lib = "glyphicon"),
-                                                onclick ="window.open('/help/randomForestSurvival.html', '_blank')")),
+                                                onclick ="window.open('help/randomForestSurvival.html', '_blank')")),
                           column(4,actionButton(inputId = "runRF", label = "Run", icon = icon("play", lib = "glyphicon"))))
                  
                  
@@ -534,7 +534,7 @@ library("knitr")
               ),
             
             fluidRow(column(4,actionButton(inputId = "helpCoxRegression", label = "Help", icon = icon("question-sign", lib = "glyphicon"),
-                                           onclick ="window.open('/help/cutoffValue.html', '_blank')")),
+                                           onclick ="window.open('help/cutoffValue.html', '_blank')")),
                      column(4,actionButton(inputId = "runCutoff", label = "Run", icon = icon("play", lib = "glyphicon"))))
             
             
