@@ -1,0 +1,180 @@
+
+### 2.5. Optimal Cutoff
+
+#### Concept
+To investigate whether the higher or lower expressions of differentially expressed genes lead to more survival risks for patients, expression levels of genes can be dichotomized based on certain cutoff values by maximizing certain test statistics. 
+
+#### Usage
+
+An optimal cutoff value can be determined by applying the following steps:
+
+1. Select the analysis method as `Optimal Cutoff` from `Analysis` tab.
+2. Select one or more markers from `Select marker(s)` box
+3. Select appropriate `Survival time` and `Status variable` 
+4. Select a category for status variable
+5. Select a test statistic (log-rank, Gehan-Breslow, Tarone-Ware, Petp-Peto, Modified Petp-Peto, Flemington-Harrington) for optimal cutoff determination.
+3. In advanced options, one can change confidence interval type, as log, log-log or plain, variance estimation method, as Greenwood or Tsiatis, Flemington-Harrington weights and confidence level
+6. Click `Run` button to run the analysis.
+
+
+<img src="images/optimalCutoff.jpg" alt="Cox Regression help" align="middle" style="width:800px; height:350;"/>
+
+
+#### Outputs
+
+#####a) Optimal cutoff value(s)
+
+An optimal cutoff value can be obtained as well as hazard ratio (HR) with confidence interval, mean survival time for low and high gene expression levels, and p value for selected significance test.   
+
+```{r cutoff, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE, include=FALSE}
+
+data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+
+library("survival")
+library("survMisc")
+library("DT")
+library("highcharter")
+source("cuttOffForSurvival.R")
+
+ result <- cuttOffForSurvival(markers = "PGR.208305_at", survivalTime = "dmfs_time", statusVariable = "dmfs_event", status = 1, compTest = "logRank", p= 1, q = 1, nmin=1, 
+                     confidenceLevel = 95, higher = TRUE, data = data)
+
+```
+
+```{r cutoffTable, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+datatable(result[[1]], extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+       dom = 'Bfrtip',
+       buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+     ))
+
+```
+#####b) Optimal cutoff value(s)
+A Kaplan-Meier plot can be created after dichotomize the gene expression level as high and low.
+
+```{r cutoffPlotKM, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+dataList = result[[2]]
+   
+   
+   data = dataList[["PGR.208305_at"]]
+   
+   survivalTime = "time2"
+   statusVariable  = "event2"
+   status = TRUE
+   
+   ci = "log"
+   varianceEstimation = "greenwood"
+   confidenceLevel = 95
+   
+   
+   fctr = "x2"
+   factors = fctr
+   # ci = input$ciKM
+   # varianceEstimation = input$varianceEstimationKM
+   # confidenceLevel = input$confidenceLevelKM
+   
+   
+   if(!is.null(survivalTime)){
+     survivalTime = as.matrix(data[, survivalTime, drop = FALSE])
+   }
+   
+   if(!is.null(factors)){
+     factors = as.factor(data[, factors])
+   }
+   
+   if(!is.null(factors)){
+     factorsName = data[, factors, drop = FALSE]
+   }
+   
+   if(!is.null(statusVariable)){
+     statusVariable = data[, statusVariable]
+     
+   }
+   
+   if(!is.null(status)){
+     if(is.numeric(status)){status = as.numeric(status)}else{status = as.factor(status)}
+   }
+   
+   if(!is.null(factors)){
+     newData = data.frame(id =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime,
+                          statusVar=statusVariable,factor = factors)
+     newData = newData[complete.cases(newData),]
+     colnames(newData) = c("id","time","statusVar", "factor")
+     
+   }else{
+     
+     newData = data.frame(id =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime,
+                          statusVar=statusVariable)
+     newData = newData[complete.cases(newData),]
+     colnames(newData) = c("id", "time", "statusVar")
+     
+   }
+   
+   newData$statusVar = newData$statusVar%in%status
+   
+   
+   #data[,input$survivalTimeKM] = as.numeric(data[,input$survivalTimeKM])
+   #data[,input$factorVarKM] = as.factor(data[,input$factorVarKM])
+   
+   
+   if(!is.null(fctr)){
+     compareCurves <- survfit(Surv(time, statusVar == TRUE) ~ factors, data = newData, conf.type = ci, error = varianceEstimation, conf.int = confidenceLevel/100)
+     
+     
+     # for(i in 1:length(names(compareCurves$strata))) {
+     #   
+     #   names(compareCurves$strata)[i] = gsub("factors", input$factorKM, names(compareCurves$strata)[i])
+     #   
+     # }
+     
+   }else{
+     compareCurves <- survfit(Surv(time, statusVar == TRUE) ~ 1, data = newData, conf.type = ci, error = varianceEstimation, conf.int = confidenceLevel/100)
+   }
+   
+
+    fctr = "x2"
+   enabledLegend = TRUE
+   
+   is.even <- function(x) x %% 2 == 0
+   
+   ranges = TRUE
+   
+   p = hchart(compareCurves, ranges = ranges, type = "line", markTimes = FALSE)# %>% hc_colors(cols)#, xAxis = list(crosshair = list(width = 1, color = "#000")))
+   
+   if(ranges){
+     if(!is.null(fctr)){
+       
+       for(i in 1:length(p$x$hc_opts$series)){
+         
+         if(is.even(i)){
+           p$x$hc_opts$series[[i]]$name = "CI (95%)"
+           
+         }
+         
+       }
+     }else{
+       
+       p$x$hc_opts$series[[2]]$name = "CI (95%)"
+       
+       
+     }
+   }
+   
+  
+     p2 = p %>% hc_exporting(enabled = TRUE, filename = "plot") %>% 
+       hc_title(text = "Kaplan-Meier Plot") %>%  
+       hc_xAxis(title = list(text = "Time"), tickInterval=NULL, tickLength = 5, lineWidth = 1)  %>%  
+       hc_yAxis(title = list(text = "Survival Probability"), lineWidth = 1, tickLength = 5, tickWidth= 1, labels = list(format = "{value:.2f}")) %>% 
+       #hc_colors("#440154") %>%
+       hc_chart(backgroundColor = "white", zoomType = "xy") %>% 
+       hc_legend(enabled = enabledLegend) %>% 
+       hc_plotOptions(line = list(dashStyle = "Solid"), area = list(zIndex = 15), series = list(enableMouseTracking = TRUE)) %>% 
+       hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 3, followTouchMove = FALSE, headerFormat = "<b>Time</b>: {point.key} <br>")#, pointFormat = "{series.name}: {point.y}")
+     
+     
+   
+   p2
+   
+   
+```
+    

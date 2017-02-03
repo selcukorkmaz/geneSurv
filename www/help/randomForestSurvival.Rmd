@@ -1,0 +1,926 @@
+### 2.4. Random Survival Forests
+
+#### Concept
+
+Random survival forests, an ensemble method for analysing right censored data, first introduced by <a href ="https://arxiv.org/pdf/0811.1645.pdf" target = "_blank" > Ishwaran et al, 2008</a>. RSF has several advantages over Cox regression: (i) Unlike Cox regression, RSF does not rely on proportional hazard assumption. (ii) RSF accounts for nonlinear effects and interactions for factor variables. 
+
+#### Usage
+
+A random survival forests analysis can be conducted by applying the following steps:
+
+1. Select the analysis method as `Random Survival Forests` from `Analysis` tab.
+2. Select suitable variables for the analysis, such as `survival time`, `status variable`, `category value for status variable`, and categorical and continuous predictors for the model.
+3. In advanced options, `interaction terms`, `strata terms` and `time dependent covariates` can be added to the model. Moreover, if there are multiple records for observations, users can specify it by clicking `Multiple ID` checkbox. From `RSF options`, `number of tree`, `bootstrap method`, `randomly selected number of variable`, `minimum number of cases in terminal node`, `maximum depth for a tree`, `splitting rule`, `number of split`, `missing values`, `number of iterations of the missing data algorithm`, `proximity of cases`, `size of bootstrap` and `type of bootstrap` can be adjusted. 
+4. Click `Run` button to run the analysis.
+
+
+<img src="images/randomSurvivalForest.jpg" alt="Cox Regression help" align="middle" style="width:800px; height:350;"/>
+
+
+
+#### Outputs
+
+
+
+
+```{r rsfIndividual, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+      library("randomForestSRC")
+      library("pec")
+      library("DT")
+      library("highcharter")
+      library("survival")
+
+      data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+      survivalTime = "dmfs_time"
+      categoricalInput = "ER_IHC"
+      continuousInput = c("ESR1.205225_at", "PGR.208305_at")
+      statusVariable = "dmfs_event"
+      status =  1
+      
+      addInteractions = FALSE
+      twoWayinteractions = FALSE
+      threeWayinteractions = FALSE
+      customInteractions = FALSE
+      selectCustomInteractionTerms = FALSE
+      timeDependetCovariate = FALSE
+      timeDependentVariableTransformation = FALSE
+      selectTimeDependentCovariate = FALSE
+      strata = FALSE
+      strataVariable = FALSE
+      referenceCategory = "first"
+      multipleID = FALSE
+      
+  
+      
+      if(!is.null(survivalTime)){
+        survivalTime = as.matrix(data[, survivalTime, drop = FALSE])
+        survivalTime = apply(survivalTime, 2, as.numeric)
+      }
+      
+      if(!is.null(categoricalInput)){
+        categoricalInput = as.data.frame(data[, categoricalInput, drop = FALSE])
+        categoricalInput = apply(categoricalInput, 2, as.factor)
+        categoricalInput = as.data.frame(categoricalInput)
+        
+        
+      }
+      
+      if(!is.null(continuousInput)){
+        continuousInput = as.data.frame(data[, continuousInput, drop = FALSE])
+        continuousInput = apply(continuousInput, 2, as.numeric)
+        continuousInput = as.data.frame(continuousInput)
+      }
+      
+      if(!is.null(statusVariable)){
+        statusVariable = as.factor(data[, statusVariable])
+        
+        
+      }
+      
+      if(!is.null(status)){
+        if(is.numeric(status)){status = as.factor(status)}else{status = as.factor(status)}
+        
+      }
+      
+      if(!is.null(categoricalInput) && !is.null(continuousInput)){
+        newData = data.frame(id2 =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime[,1], 
+                             statusVar=statusVariable, categoricalInput, continuousInput)
+        newData = newData[complete.cases(newData),]
+        
+      }else if(!is.null(categoricalInput) && is.null(continuousInput)){
+        newData = data.frame(id2 =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime[,1], 
+                             statusVar=statusVariable, categoricalInput)
+        newData = newData[complete.cases(newData),]
+        
+      }else if(is.null(categoricalInput) && !is.null(continuousInput)){
+        newData = data.frame(id2 =seq(1,dim(survivalTime)[1], 1), survivalTime = survivalTime[,1], 
+                             statusVar=statusVariable, continuousInput)
+        newData = newData[complete.cases(newData),]
+        
+      }
+      
+      if(referenceCategory != "first"){
+        for(l in 1:dim(categoricalInput)[2]){
+          newData[, names(categoricalInput)[l]] <- relevel(categoricalInput[,l], ref = levels(categoricalInput[,l])[length(levels(categoricalInput[,l]))])
+        }
+      }
+      
+      
+      if(addInteractions){
+        
+        if(!is.null(categoricalInput) || !is.null(continuousInput)){
+          
+          fNames <- names(c(categoricalInput, continuousInput))
+          
+        }  
+        
+        if(twoWayinteractions && length(fNames) >1){
+          
+          twoWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 2)), paste, collapse = ":"))
+          names(twoWayInteractionTerms) <- NULL
+          
+        }else{twoWayInteractionTerms = NULL}
+        
+        if(threeWayinteractions && length(fNames) >2){
+          
+          threeWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 3)), paste, collapse = ":"))
+          names(threeWayInteractionTerms) <- NULL
+          
+        }else{threeWayInteractionTerms = NULL}  
+    
+        if(customInteractions){
+          
+          interactions = selectCustomInteractionTerms
+          
+        }else{
+          
+          interactions = c(twoWayInteractionTerms, threeWayInteractionTerms)
+          
+        } 
+        
+      }else{
+        interactions = NULL
+        customInteractionTerms= NULL
+      }
+      
+      
+      if(strata){
+        
+        strataVar = strataVariable
+        newData = cbind.data.frame(newData, data[, strataVar])
+        names(newData)[dim(newData)[2]] = strataVar
+        
+      }
+      
+      
+      newData = cbind.data.frame(newData, data[colnames(data)[!(colnames(data) %in% colnames(newData))]])
+      
+      newData$statusVar = as.factor(newData$statusVar)%in%status
+      
+      if(timeDependetCovariate && !is.null(selectTimeDependentCovariate)){
+        
+        timeDependentCovariateNames = list()
+        for(i in 1:length(selectTimeDependentCovariate)){
+          
+          if(timeDependentVariableTransformation == "log"){
+            
+            newData = cbind.data.frame(newData, tmpNames = newData[,selectTimeDependentCovariate[i]]*log(newData[, "survivalTime"]))
+            
+          }else{
+            
+            newData = cbind.data.frame(newData, tmpNames = as.numeric(newData[,selectTimeDependentCovariate[i]])*newData[, "survivalTime"])
+            
+          }
+          
+          names(newData)[dim(newData)[2]] = timeDependentCovariateNames[[i]] = paste0("time_", selectTimeDependentCovariate[i])
+          
+        }
+        
+        timeDependentNames = unlist(timeDependentCovariateNames)    
+        
+      }
+      
+      
+      if(!is.null(categoricalInput) || !is.null(continuousInput)){
+        
+        predictors = paste0(names(c(categoricalInput, continuousInput)), collapse = "+")
+        
+        if(!is.null(interactions)){
+          
+          
+          if(length(interactions) > 1){
+            interactions2 = paste(interactions, collapse = "+")
+            predictors2 = paste(predictors, interactions2, sep = "+", collapse = "+")
+          }    
+          
+          if(length(interactions) == 1){
+            predictors2 = paste(predictors, interactions, sep = "+")
+          }
+          predictors = predictors2
+        }
+        
+        if(timeDependetCovariate && !is.null(selectTimeDependentCovariate)){
+          
+          
+          if(length(timeDependentNames) > 1){
+            timeDependents = paste(timeDependentNames, collapse = "+")
+          }else{
+            
+            timeDependents =  timeDependentNames
+          }
+          predictors = paste(predictors, timeDependents, sep = "+", collapse = "+")
+        }
+        
+        if(strata && !is.null(strataVariable)){
+          
+          strataVars = paste0("strata(",strataVar,")")
+          predictors = paste(predictors, strataVars, sep = "+", collapse = "+")
+          
+        } 
+        
+        }else{predictors = 1}
+      
+        formula = as.formula(paste0("Surv(survivalTime, statusVar ==  TRUE) ~ ", predictors))
+            
+        rf = rfsrc(formula = formula, data = newData, tree.err=TRUE, 
+                     importance = TRUE, membership = TRUE, statistics = TRUE, do.trace = TRUE,
+                     split.null = FALSE, sampsize = NULL,
+                     case.wt = NULL, xvar.wt = NULL, forest = TRUE, var.used = FALSE, 
+                     split.depth = FALSE, seed = 1234, coerce.factor = NULL)
+      
+```
+
+
+
+
+#####a. Individual Survival Predictions
+
+Survival predictions for each observation can be obtained. In this table, rows represent observations whereas columns represent time endpoints.
+
+```{r rsfIndividualPreds, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+   
+     survival = data.frame(rf$survival)
+
+    survival = apply(survival, 2, FUN = function(x){
+  
+          as.numeric(formatC(x, digits = 3))
+  
+    })
+
+    survival = as.data.frame(survival)
+    colnames(survival) = as.character(rf$time.interest)
+  
+
+
+      datatable(survival, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+      dom = 'Bfrtip',
+      buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+      ))
+
+```
+
+
+*
+
+#####b. Individual Survival Predictions OOB
+
+Out of bag (OOB) survival predictions for each observation can be obtained. In this table, rows represent observations whereas columns represent time endpoints.
+
+
+```{r rsfIndividualPresOOB, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+      survivalOOB = data.frame(rf$survival.oob)
+
+      survivalOOB = apply(survivalOOB, 2, FUN = function(x){
+    
+            as.numeric(formatC(x, digits = 3))
+    
+      })
+
+      survivalOOB = as.data.frame(survivalOOB)
+      colnames(survivalOOB) = as.character(rf$time.interest)
+    
+
+
+        datatable(survivalOOB, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+        dom = 'Bfrtip',
+        buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+        ))
+
+```
+
+
+
+****************************
+
+
+
+#####c. Individual Cumulative Hazard Predictions
+
+Cumulative hazard predictions for each observation can be obtained. In this table, rows represent observations whereas columns represent time endpoints.
+
+
+```{r rsfCH, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+      chfRes = data.frame(rf$chf)
+
+      chfRes = apply(chfRes, 2, FUN = function(x){
+          
+                  as.numeric(formatC(x, digits = 3))
+          
+            })
+
+        chfRes = as.data.frame(chfRes)
+        colnames(chfRes) = as.character(rf$time.interest)
+          
+        datatable(chfRes, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+              dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE))
+
+```
+
+
+
+
+***************************
+
+
+#####d. Individual Cumulative Hazard Predictions OOB
+
+Out of bag (OOB) cumulative hazard predictions for each observation can be obtained. In this table, rows represent observations whereas columns represent time endpoints.
+
+
+```{r rsfChOOB, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+      
+              chfOOBres = data.frame(rf$chf.oob)
+
+              chfOOBres = apply(chfOOBres, 2, FUN = function(x){
+            
+                    as.numeric(formatC(x, digits = 3))
+            
+              })
+
+              chfOOBres = as.data.frame(chfOOBres)
+              colnames(chfOOBres) = as.character(rf$time.interest)
+            
+
+
+                datatable(chfOOBres, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+                dom = 'Bfrtip',
+                buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+                ))
+
+```
+
+
+
+***************************************
+
+
+
+#####e. Error Rate
+
+An error rate table, which shows error rate estimations for each tree, can be obtained.
+
+```{r rsfErrorRate, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+   errorRates = data.frame(rf$err.rate)
+
+    errorRates = apply(errorRates, 2, FUN = function(x){
+              
+        as.numeric(formatC(x, digits = 3))
+    })
+
+     errorRates = data.frame(1:length(errorRates), errorRates)
+
+     colnames(errorRates) = c("Number of tree", "Error rate")
+
+     datatable(errorRates, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+        dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE))
+
+```
+
+
+
+****************************************
+
+
+
+
+#####f. Variable Importance
+
+A variable importance table as well as an interactive plot, which shows relative importance of variables in fitted model, can be obtained.
+
+```{r rsfVarImp, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+   variableImp = data.frame(t(rf$importance))
+
+      variableImp = apply(variableImp, 2, FUN = function(x){
+    
+            as.numeric(formatC(x, digits = 3))
+    
+      })
+
+      variableImp = as.data.frame(variableImp)
+
+        datatable(variableImp, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+        dom = 'Bfrtip',
+        buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+        ))
+```
+
+
+```{r rsfVarImpPlot, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+    importance = as.numeric(formatC(rf$importance, digits = 3, format = "f"))
+
+
+      highchart() %>% 
+        hc_chart(type = "column", inverted = TRUE) %>% 
+        hc_xAxis(categories = names(rf$importance)) %>% 
+        hc_add_series(data = importance, name = "Importance") %>%
+        hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>")%>%
+        hc_add_theme(hc_theme_google())
+```
+
+
+*************************************
+
+#####g. Overall Survival Plot
+A survival plot can be created based on Nelson-Aalen estimator and overall ensemble predictions.
+
+```{r survivalOverallPlotRF, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+source("get.event.info.R")
+library(parallel)
+   event.info <- get.event.info(rf)
+            
+            km.obj <- matrix(unlist(mclapply(1:length(event.info$time.interest), 
+                                             function(j) {
+                                               c(sum(event.info$time >= event.info$time.interest[j], 
+                                                     na.rm = TRUE), sum(event.info$time[event.info$cens != 
+                                                                                          0] == event.info$time.interest[j], na.rm = TRUE))
+                                             })), ncol = 2, byrow = TRUE)
+            
+            Y <- km.obj[, 1]
+            d <- km.obj[, 2]
+            r <- d/(Y + 1 * (Y == 0))
+            survNelsonAalen <- exp(-cumsum(r))
+            
+            survEnsemble = rf$survival
+            survMeanEnsemble <- colMeans(survEnsemble, na.rm = TRUE)
+            time = event.info$time.interest
+            
+            
+            survRandomForest = data.frame(survNelsonAalen, survMeanEnsemble)
+            survListOob = list()
+            
+            survListOob[[1]] = list(data = as.matrix(cbind(time, survRandomForest[,1])), name = "Nelson-Aalen Estimator", type = "line")
+            survListOob[[2]] = list(data = as.matrix(cbind(time, survRandomForest[,2])), name = "Overall Ensemble", type = "line")
+            names(survListOob) = NULL
+            
+            
+            highchart() %>% hc_exporting(enabled = TRUE, filename = "survivalRFEnsemblePlot") %>% 
+              hc_add_series_list(lst =survListOob) %>%
+              hc_chart(zoomType = "xy", inverted = FALSE) %>%
+              hc_xAxis(categories = NULL, title = list(text = "Time")) %>%
+              hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Survival"))%>%
+              hc_legend(enabled = legend) %>%
+              hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+              hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
+                             errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+              hc_add_theme(hc_theme_google())
+
+                
+```
+
+
+
+#####h. Individual Random Survival Plot
+
+A survival plot can be drawn for survival predictions from random survival forests model. Each line represents a survival curve for each observation.
+
+```{r survivalPlotRF, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+  
+              surv = data.frame(t(rf$survival))
+
+              survList = list()
+              
+              for(i in 1:ncol(surv)){
+                
+                survList[[i]] = list(data = as.matrix(cbind(rf$time.interest, surv[,i])), name = paste0("Survival (obs", i, ")"), type = "line")
+                
+              }
+              names(survList) = NULL
+              
+              indx = 1:ncol(surv)
+
+              survList =  survList[indx]
+
+              legend = FALSE
+
+              highchart() %>% hc_exporting(enabled = TRUE, filename = "survivalRFPlot") %>% 
+                hc_add_series_list(lst =survList) %>%
+                hc_chart(zoomType = "xy", inverted = FALSE) %>%
+                hc_xAxis(categories = NULL, title = list(text = "Time")) %>%
+                hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Survival"))%>%
+                hc_legend(enabled = legend) %>%
+                hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+                hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
+                               errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+                hc_add_theme(hc_theme_google())
+
+                
+```
+
+
+**************************************
+
+
+#####i. Individual Survival OOB Plot
+
+
+A survival plot can be drawn for OOB survival predictions from random survival forests model. Each line represents a survival curve for each observation.
+
+```{r survivalOOBplot, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+  
+              survOob = data.frame(t(rf$survival.oob))
+
+              survListOob = list()
+              
+              for(i in 1:ncol(survOob)){
+                
+                survListOob[[i]] = list(data = as.matrix(cbind(rf$time.interest, survOob[,i])), name = paste0("Survival (obs", i, ")"), type = "line")
+                
+              }
+              names(survListOob) = NULL
+              
+              indx = 1:ncol(survOob)
+              
+              survListOob =  survListOob[indx]
+
+              legend = FALSE
+
+              highchart() %>% hc_exporting(enabled = TRUE, filename = "survivalRFOOBPlot") %>% 
+                hc_add_series_list(lst =survListOob) %>%
+                hc_chart(zoomType = "xy", inverted = FALSE) %>%
+                hc_xAxis(categories = NULL, title = list(text = "Time")) %>%
+                hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Survival OOB"))%>%
+                hc_legend(enabled = legend) %>%
+                hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+                hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
+                               errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+                hc_add_theme(hc_theme_google())
+
+                
+```
+
+
+************************************
+
+
+#####j. Individual Cumulative Hazard Plot
+
+
+A cumulative hazard plot can be drawn for hazard predictions from random survival forests model. Each line represents a survival curve for each observation.
+
+
+```{r hazardPlotRSF, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+   hazardRF = data.frame(t(rf$chf))
+
+              hazardList = list()
+              
+              for(i in 1:ncol(hazardRF)){
+                
+                hazardList[[i]] = list(data = as.matrix(cbind(rf$time.interest, hazardRF[,i])), name = paste0("Survival (obs", i, ")"), type = "line")
+                
+              }
+              names(hazardList) = NULL
+              
+              indx = 1:ncol(hazardRF)
+            
+              hazardList =  hazardList[indx]
+
+              legend = FALSE
+
+              highchart() %>% hc_exporting(enabled = TRUE, filename = "survivalRFPlot") %>% 
+                hc_add_series_list(lst =hazardList) %>%
+                hc_chart(zoomType = "xy", inverted = FALSE) %>%
+                hc_xAxis(categories = NULL, title = list(text = "Time")) %>%
+                hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Survival"))%>%
+                hc_legend(enabled = legend) %>%
+                hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+                hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
+                               errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+                hc_add_theme(hc_theme_google())
+
+```
+
+
+*****************************************
+
+
+#####k. Individual Cumulative Hazard OOB Plot
+
+
+A cumulative hazard plot can be drawn for OOB cumulative hazard predictions from random survival forests model. Each line represents a survival curve for each observation.
+
+
+```{r hazardOOBPlot, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+        hazardRFOOB = data.frame(t(rf$chf.oob))
+
+              hazardListOOB = list()
+              
+              for(i in 1:ncol(hazardRFOOB)){
+                
+                hazardListOOB[[i]] = list(data = as.matrix(cbind(rf$time.interest, hazardRFOOB[,i])), name = paste0("Survival (obs", i, ")"), type = "line")
+                
+              }
+              names(hazardListOOB) = NULL
+              
+              
+              indx = 1:ncol(hazardRFOOB)
+              
+
+              hazardListOOB =  hazardListOOB[indx]
+
+              legend = FALSE
+
+              highchart() %>% hc_exporting(enabled = TRUE, filename = "survivalRFPlot") %>% 
+                hc_add_series_list(lst =hazardListOOB) %>%
+                hc_chart(zoomType = "xy", inverted = FALSE) %>%
+                hc_xAxis(categories = NULL, title = list(text = "Time")) %>%
+                hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Survival"))%>%
+                hc_legend(enabled = legend) %>%
+                hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+                hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
+                               errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+                hc_add_theme(hc_theme_google())
+```
+
+
+***********************************************
+
+#####l. Error Rate Plot
+
+An interactive error rate plot, which shows error rate alterations when number of trees increased, can be drawn. 
+
+```{r errorRatePlot, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+           highchart() %>% hc_exporting(enabled = TRUE, filename = "errorPlot") %>% 
+              hc_add_series(data = rf$err.rate, type = "line", name = "Error") %>%
+              hc_chart(zoomType = "xy", inverted = FALSE) %>%
+              hc_xAxis(categories = NULL, title = list(text = "Number of tree")) %>%
+              hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Error rate"))%>%
+              hc_legend(enabled = TRUE) %>%
+              hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Tree: </b>{point.x} <br>") %>%
+              hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
+                             errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+              hc_add_theme(hc_theme_google())
+
+                
+```
+
+
+
+
+
+***********************************************
+
+
+#####m. Cox vs RSF
+
+A Cox model can be compared to random survival forests model through an interactive plot for visual inspection of both models. 
+
+```{r coxVsRsf, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+              survivalTime = "dmfs_time"
+              categoricalInput = "ER_IHC"
+              continuousInput = c("ESR1.205225_at", "PGR.208305_at")
+              statusVariable =  "dmfs_event"
+              status =  1
+              addInteractions = FALSE
+              twoWayinteractions = FALSE
+              referenceCategory = "first"
+              
+              
+              if(!is.null(survivalTime)){
+                survivalTime = as.matrix(data[, survivalTime, drop = FALSE])
+                survivalTime = apply(survivalTime, 2, as.numeric)
+              }
+              
+              if(!is.null(categoricalInput)){
+                categoricalInput = as.data.frame(data[, categoricalInput, drop = FALSE])
+                categoricalInput = apply(categoricalInput, 2, as.factor)
+                categoricalInput = as.data.frame(categoricalInput)
+                
+                
+              }
+              
+              if(!is.null(continuousInput)){
+                continuousInput = as.data.frame(data[, continuousInput, drop = FALSE])
+                continuousInput = apply(continuousInput, 2, as.numeric)
+                continuousInput = as.data.frame(continuousInput)
+              }
+              
+              if(!is.null(statusVariable)){
+                statusVariable = as.factor(data[, statusVariable])
+                
+                
+              }
+              
+              if(!is.null(status)){
+                if(is.numeric(status)){status = as.factor(status)}else{status = as.factor(status)}
+                
+              }
+              
+              if(!is.null(categoricalInput) && !is.null(continuousInput)){
+                newData = data.frame(id2 =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime[,1], 
+                                     statusVar=statusVariable, categoricalInput, continuousInput)
+                newData = newData[complete.cases(newData),]
+                
+              }else if(!is.null(categoricalInput) && is.null(continuousInput)){
+                newData = data.frame(id2 =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime[,1], 
+                                     statusVar=statusVariable, categoricalInput)
+                newData = newData[complete.cases(newData),]
+                
+              }else if(is.null(categoricalInput) && !is.null(continuousInput)){
+                newData = data.frame(id2 =seq(1,dim(survivalTime)[1], 1), survivalTime = survivalTime[,1], 
+                                     statusVar=statusVariable, continuousInput)
+                newData = newData[complete.cases(newData),]
+                
+              }
+              
+              
+              
+              
+              if(referenceCategory != "first"){
+                for(l in 1:dim(categoricalInput)[2]){
+                  newData[, names(categoricalInput)[l]] <- relevel(categoricalInput[,l], ref = levels(categoricalInput[,l])[length(levels(categoricalInput[,l]))])
+                }
+              }
+              
+              
+              if(addInteractions){
+                
+                if(!is.null(categoricalInput) || !is.null(continuousInput)){
+                  
+                  fNames <- names(c(categoricalInput, continuousInput))
+                  
+                }  
+                
+                if(twoWayinteractions && length(fNames) >1){
+                  
+                  twoWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 2)), paste, collapse = ":"))
+                  names(twoWayInteractionTerms) <- NULL
+                  
+                }else{twoWayInteractionTerms = NULL}
+                
+                if(threeWayinteractions && length(fNames) >2){
+                  
+                  threeWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 3)), paste, collapse = ":"))
+                  names(threeWayInteractionTerms) <- NULL
+                  
+                }else{threeWayInteractionTerms = NULL}  
+                
+                #if(customInteractions && length(fNames) >2){
+                
+                #   ctwoWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 2)), paste, collapse = ":"))
+                #   names(twoWayInteractionTerms) <- NULL
+                
+                #   cthreeWayInteractionTerms <- sort(sapply(data.frame(combn(fNames, 3)), paste, collapse = ":"))
+                #  names(threeWayInteractionTerms) <- NULL
+                
+                
+                #  customInteractionTerms = c(ctwoWayInteractionTerms, cthreeWayInteractionTerms)
+                # names(customInteractionTerms) = NULL
+                
+                
+                
+                #}else{customInteractionTerms = NULL}
+                
+                if(customInteractions){
+                  
+                  interactions = selectCustomInteractionTerms
+                  
+                }else{
+                  
+                  interactions = c(twoWayInteractionTerms, threeWayInteractionTerms)
+                  
+                } 
+                
+              }else{
+                interactions = NULL
+                customInteractionTerms= NULL
+              }
+              
+              
+              if(strata){
+                
+                strataVar = strataVariable
+                newData = cbind.data.frame(newData, data[, strataVar])
+                names(newData)[dim(newData)[2]] = strataVar
+                
+              }
+              
+              
+              newData = cbind.data.frame(newData, data[colnames(data)[!(colnames(data) %in% colnames(newData))]])
+              
+              newData$statusVar = as.factor(newData$statusVar)%in%status
+              
+              if(timeDependetCovariate && !is.null(selectTimeDependentCovariate)){
+                
+                timeDependentCovariateNames = list()
+                for(i in 1:length(selectTimeDependentCovariate)){
+                  
+                  if(timeDependentVariableTransformation == "log"){
+                    
+                    newData = cbind.data.frame(newData, tmpNames = newData[,selectTimeDependentCovariate[i]]*log(newData[, "survivalTime"]))
+                    
+                  }else{
+                    
+                    newData = cbind.data.frame(newData, tmpNames = as.numeric(newData[,selectTimeDependentCovariate[i]])*newData[, "survivalTime"])
+                    
+                  }
+                  
+                  names(newData)[dim(newData)[2]] = timeDependentCovariateNames[[i]] = paste0("time_", selectTimeDependentCovariate[i])
+                  
+                }
+                
+                timeDependentNames = unlist(timeDependentCovariateNames)    
+                
+              }
+              
+              
+              if(!is.null(categoricalInput) || !is.null(continuousInput)){
+                
+                predictors = paste0(names(c(categoricalInput, continuousInput)), collapse = "+")
+                
+                if(!is.null(interactions)){
+                  
+                  
+                  if(length(interactions) > 1){
+                    interactions2 = paste(interactions, collapse = "+")
+                    predictors2 = paste(predictors, interactions2, sep = "+", collapse = "+")
+                  }    
+                  
+                  if(length(interactions) == 1){
+                    predictors2 = paste(predictors, interactions, sep = "+")
+                  }
+                  predictors = predictors2
+                }
+                
+                if(timeDependetCovariate && !is.null(selectTimeDependentCovariate)){
+                  
+                  
+                  if(length(timeDependentNames) > 1){
+                    timeDependents = paste(timeDependentNames, collapse = "+")
+                  }else{
+                    
+                    timeDependents =  timeDependentNames
+                  }
+                  predictors = paste(predictors, timeDependents, sep = "+", collapse = "+")
+                }
+                
+                if(strata && !is.null(strataVariable)){
+                  
+                  strataVars = paste0("strata(",strataVar,")")
+                  predictors = paste(predictors, strataVars, sep = "+", collapse = "+")
+                  
+                } 
+                
+                }else{predictors = 1}
+              
+                formula = as.formula(paste0("Surv(survivalTime, statusVar ==  TRUE) ~ ", predictors))
+
+
+                Models <- list("Cox model"=coxph(formula = formula, data=newData, y=TRUE),
+                     "RSF model"=rfsrc(formula = formula, data = newData, tree.err=TRUE, 
+                     importance = TRUE, membership = TRUE, statistics = TRUE, do.trace = TRUE,
+                     split.null = FALSE, sampsize = NULL,
+                     case.wt = NULL, xvar.wt = NULL, forest = TRUE, var.used = FALSE, 
+                     split.depth = FALSE, seed = 1234, coerce.factor = NULL, y=TRUE))
+
+                # compute the apparent prediction error 
+                PredError <- pec(object=Models,
+                                 formula = formula,
+                                 data=newData,
+                                 exact=TRUE,
+                                 cens.model="marginal",
+                                 splitMethod="none",
+                                 B=0,
+                                 verbose=TRUE)
+
+
+                modelErrors = data.frame(PredError$AppErr)
+
+                modelErrorsList = list()
+
+                for(i in 1:ncol(modelErrors)){
+                  
+                  modelErrorsList[[i]] = list(data = as.matrix(cbind(PredError$time, modelErrors[,i])), name = colnames(modelErrors[i]), type = "line")
+                  
+                }
+                names(modelErrorsList) = NULL
+
+
+
+                highchart() %>% hc_exporting(enabled = TRUE, filename = "modelErrorPlot") %>% 
+                  hc_add_series_list(lst =modelErrorsList) %>%
+                  hc_chart(zoomType = "xy", inverted = FALSE) %>%
+                  hc_xAxis(categories = NULL, title = list(text = "Time")) %>%
+                  hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Prediction error"))%>%
+                  hc_legend(enabled = TRUE) %>%
+                  hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+                  hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
+                                 errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+                  hc_add_theme(hc_theme_google())
+
+                
+```
+

@@ -1,0 +1,341 @@
+### 2.1. Kaplan-Meier
+
+#### Concept
+
+Kaplan-Meier is a non-paranetric statistical method that is used to estimate survival probabilities and hazard ratios for a cohort study group. In clinical trials, it is often used to measure the part of patients living for a certain period of time after a treatment. 
+
+
+#### Variables
+* `Survival time`: Time until an event occurs (i.e. days, weeks, months, years)
+* `Status variable`: The event (i.e. death, disease, remission, recovery)
+* `Category value for status variable`: Category value of the event of interest (i.e. 1, yes)
+* `Factor variable`: A categorical variable which indicates different study groups (i.e. treatment, gender)
+
+#### Usage
+
+A Kaplan-Meier analysis can be conducted by applying the following steps: 
+
+1. Select the analysis method as `Kaplan Meier` from `Analysis` tab.
+2. Select suitable variables for the analysis, such as `survival time`, `status variable`, `category value for status variable` and `factor variable`, if exists.
+3. In advanced options, one can change confidence interval type, as log, log-log or plain, variance estimation method, as Greenwood or Tsiatis, Flemington-Harrington weights, confidence level and reference category, as first or last.
+4. Click `Run` button to run the analysis.
+
+<img src="images/survivalHelp.jpg" alt="Survival help" align="middle" style="width:800px; height:450px;"/>
+
+
+#### Outputs
+*Desired outputs can be selected by clicking Outputs checkbox. Available outputs are;* 
+
+
+```{r kaplanMeier, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE, include=FALSE}
+setwd("~/Dropbox/GSD/Studies/Web-Tools(Devel)/geneSurv/")
+
+library("survival")
+library("KMsurv")
+library("survMisc")
+source("kaplanMeier.R")
+library("highcharter")
+
+data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+
+km = kaplanMeier (survivalTime = "dmfs_time", statusVariable = "dmfs_event", status = 1, factors= "ER_IHC", survivalTable = TRUE, data = data)
+
+
+```
+
+
+
+#####a. Case summary
+
+Summary statistics, such as number and percent of observations, events and censored cases can be obtained. 
+
+```{r kaplanMeierDescriptives, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE, include=TRUE}
+      desc = km$tableResult$caseSummary
+      descs = do.call(rbind.data.frame, desc)
+      DT::datatable(descs, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+  dom = 'Bfrtip',
+  buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+     ))
+```
+
+
+*
+
+#####b. Survival table
+
+A survival table can be created. First column in the table represents factor group and number of time points (i.e. 1.2 means second time point in the first factor group, likewise 2.1 means first time point in the second group). Second column is survival time, third column gives number of subjects at risk, fourth column is the number of events, fifth column represents the cumulative probability of surviving, sixth, seventh and eight columns are associated standard error, lower and upper limits, respectively. 
+
+```{r kaplanMeier2, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+    stResult = km$testResult$survivalTable
+    stResults = do.call(rbind.data.frame, stResult)
+
+      DT::datatable(stResults, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(dom = 'Bfrtip',buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+     ))
+```
+
+
+
+
+#####c. Survival plot
+
+A forest plot can be created for each level of factor group using survival probabilites at each end point. 
+
+```{r survivalPlot, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+  surv = km$testResult$survivalTable[[names(km$testResult$hazardRatio)[1]]]
+
+    highchart() %>% hc_exporting(enabled = TRUE, filename = "survivalPlot") %>% 
+      hc_add_series(name = "Survival", type = "line", data = surv$`Cumulative probability of surviving`, showInLegend = FALSE, zIndex = 1, marker = list(lineColor = "black", lineWidth = 1), lineWidth = 0, id = "survival") %>%
+      hc_add_series(name = "CI", data = as.matrix(cbind(surv$`Lower limit`, surv$`Upper limit`)),type = "errorbar", names = "Limits", showInLegend = FALSE, zIndex = 0, lineWidth = 1.5, linkedTo = "survival") %>%
+      hc_chart(zoomType = "xy", inverted = TRUE) %>%
+      hc_xAxis(categories = as.character(surv$Time), title = list(text = "Time")) %>%
+      hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Survival")) %>%
+      #hc_plotOptions(tooltip = list(headerFormat = "<b>Time: </b>{point.x}")) %>%
+      hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+      hc_plotOptions(line = list(tooltip = list(pointFormat = "<b>{series.name}: </b>{point.y:.3f} ")), 
+                     errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+      hc_add_theme(hc_theme_google())
+```
+
+
+*
+
+#####d. Mean and Median life time
+
+Mean and median life time and their associated confidence levels can be calculated for each level of factor group. 
+
+```{r medianAndMedianLifeTime, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+     mst = km$tableResult$meanMedianSurvivalTimes
+      rownames(mst) = mst$Factor
+        mstResults =  mst[-1]
+
+
+      DT::datatable(mstResults, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+  dom = 'Bfrtip',
+  buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+     ))
+```
+
+
+*
+
+#####e. Hazard ratio
+
+Hazard ratios and their respective lower and upper limits can be calculated for each factor group at each end point. 
+
+
+```{r hazardRatioKaplanMeier, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+     hrResult = km$testResult$hazardRatio
+     hrResults = do.call(rbind.data.frame, hrResult)
+
+      DT::datatable(hrResults, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+  dom = 'Bfrtip',
+  buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+     ))
+```
+
+
+*
+
+#####f. Hazard plot
+
+A forest plot can be created for each level of factor group using hazard ratios at each end point. 
+
+
+```{r hazardPlot, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+    
+    hazard = km$testResult$hazardRatio[[names(km$testResult$hazardRatio)[1]]]
+
+    highchart() %>% hc_exporting(enabled = TRUE, filename = "hazardPlot") %>% 
+      hc_add_series(name = "Hazard", type = "line", data = hazard$Hazard.Ratio, showInLegend = FALSE, zIndex = 1, marker = list(lineColor = "black", lineWidth = 1), lineWidth = 0, id = "hazard") %>%
+      hc_add_series(name = "CI", data = as.matrix(cbind(hazard$Lower, hazard$Upper)),type = "errorbar", names = "Limits", showInLegend = FALSE, zIndex = 0, lineWidth = 1.5, linkedTo = "hazard") %>%
+      hc_chart(zoomType = "xy", inverted = TRUE) %>%
+      hc_xAxis(categories = as.character(hazard$Time), title = list(text = "Time")) %>%
+      hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Hazard Ratio")) %>%
+      #hc_plotOptions(tooltip = list(headerFormat = "<b>Time: </b>{point.x}")) %>%
+      hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+      hc_plotOptions(line = list(tooltip = list(pointFormat = "<b>{series.name}: </b>{point.y:.3f} ")), 
+                     errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+      hc_add_theme(hc_theme_google())
+```
+
+
+
+#####g. Comparison tests
+
+Six different comparison tests can be calculated for testing the differences in survival probability estimations between factor groups. 
+
+
+```{r comparisonTestsKaplanMeier, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+      
+      compTestResult = km$testResult$testResults
+      DT::datatable(compTestResult, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+                    dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE))
+```
+
+
+
+*
+
+#####h. Plots
+
+<img src="images/survivalHelpKMplots.jpg" alt="Survival plots help" align="middle" style="width:800px; height:450px;"/>
+
+
+```{r coxPlots, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE, include=FALSE}
+
+data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+
+km = kaplanMeier (survivalTime = "dmfs_time", statusVariable = "dmfs_event", status = 1, factors= "ER_IHC", survivalTable = TRUE, data = data)
+
+
+    survivalTime = "dmfs_time"
+    statusVariable = "dmfs_event"
+    status = 1
+    fctr = "ER_IHC"
+    
+
+    ci = "log"
+    varianceEstimation = "greenwood"
+    confidenceLevel = 95
+    factors = fctr
+
+
+    if(!is.null(survivalTime)){
+        survivalTime = as.matrix(data[, survivalTime, drop = FALSE])
+    }
+
+    if(!is.null(factors)){
+        factors = as.factor(data[, factors])
+    }
+
+    if(!is.null(factors)){
+        factorsName = data[, factors, drop = FALSE]
+    }
+
+    if(!is.null(statusVariable)){
+        statusVariable = data[, statusVariable]
+        
+    }
+
+    if(!is.null(status)){
+        if(is.numeric(status)){status = as.numeric(status)}else{status = as.factor(status)}
+    }
+
+    if(!is.null(factors)){
+        newData = data.frame(id =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime,
+        statusVar=statusVariable,factor = factors)
+        newData = newData[complete.cases(newData),]
+        colnames(newData) = c("id","time","statusVar", "factor")
+        
+    }else{
+        
+        newData = data.frame(id =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime,
+        statusVar=statusVariable)
+        newData = newData[complete.cases(newData),]
+        colnames(newData) = c("id", "time", "statusVar")
+        
+    }
+
+        newData$statusVar = newData$statusVar%in%status
+
+
+    #data[,input$survivalTimeKM] = as.numeric(data[,input$survivalTimeKM])
+    #data[,input$factorVarKM] = as.factor(data[,input$factorVarKM])
+
+
+    if(!is.null(fctr)){
+        compareCurves <- survfit(Surv(time, statusVar == TRUE) ~ factors, data = newData, conf.type = ci, error = varianceEstimation, conf.int = confidenceLevel/100)
+    
+
+        for(i in 1:length(names(compareCurves$strata))) {
+
+            names(compareCurves$strata)[i] = gsub("factors", "ER_IHC", names(compareCurves$strata)[i])
+
+        }
+
+    }else{
+        compareCurves <- survfit(Surv(time, statusVar == TRUE) ~ 1, data = newData, conf.type = ci, error = varianceEstimation, conf.int = confidenceLevel/100)
+    }
+
+  enabledLegend = TRUE
+  is.even <- function(x) x %% 2 == 0
+  ranges = TRUE
+```
+  
+
+##### i. Kaplan-Meier curve
+  
+Kaplan-Meier curves can be created. A number of edit options is also available for plots.   
+  
+```{r kmPlots, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+  
+ p =  hchart(compareCurves, ranges = ranges, type = "line", markTimes = TRUE, 
+                 animation = TRUE) 
+
+p %>% hc_title(text = "Kaplan-Meier Plot") %>%  
+      hc_xAxis(title = list(text = "Time"), tickInterval=NULL, tickLength = 5, lineWidth = 1)  %>%  
+      hc_yAxis(title = list(text = "Survival Probability"), lineWidth = 1, tickLength = 5, tickWidth= 1, labels = list(format = "{value:.2f}")) %>% 
+      #hc_colors("#440154") %>%
+      hc_add_theme(hc_theme_gridlight()) %>%
+      hc_chart(backgroundColor = "white", zoomType = "xy") %>% 
+      hc_legend(enabled = TRUE) %>% 
+      hc_plotOptions(line = list(dashStyle = "Solid"), area = list(zIndex = 15), series = list(enableMouseTracking = TRUE)) %>% 
+      hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 3, followTouchMove = FALSE, headerFormat = "<b>Time</b>: {point.key} <br>")#, pointFormat = "{series.name}: {point.y}")
+  
+
+
+```
+
+
+
+
+##### j. Hazard plot
+
+Hazard plot can be created. A number of edit options is also available for plots.   
+
+  
+```{r hazardPlots, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+  
+
+  p <- hchart(compareCurves, fun = "cumhaz", ranges = ranges, type = "line", markTimes = TRUE, 
+                 animation = TRUE) 
+
+
+p %>% hc_title(text = "Hazard Plot") %>%  
+      hc_xAxis(title = list(text = "Time"), tickInterval=NULL, tickLength = 5, lineWidth = 1)  %>%  
+      hc_yAxis(title = list(text = "Cumulative Hazard"), lineWidth = 1, tickLength = 5, tickWidth= 1, labels = list(format = "{value:.2f}")) %>% 
+      #hc_colors("#440154") %>%
+      hc_add_theme(hc_theme_gridlight()) %>%
+      hc_chart(backgroundColor = "white", zoomType = "xy") %>% 
+      hc_legend(enabled = TRUE) %>% 
+      hc_plotOptions(line = list(dashStyle = "Solid"), area = list(zIndex = 15), series = list(enableMouseTracking = TRUE)) %>% 
+      hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 3, followTouchMove = FALSE, headerFormat = "<b>Time</b>: {point.key} <br>")#, pointFormat = "{series.name}: {point.y}")
+  
+```
+
+
+
+
+
+##### k. Log-Minus-Log plot
+
+Log-Minus-Log plot can be created. A number of edit options is also available for plots.   
+  
+```{r lmlPlots, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+  
+
+  p <- hchart(compareCurves, fun = "cloglog", ranges = ranges, type = "line", markTimes = TRUE, 
+                 animation = TRUE) 
+
+p %>% hc_title(text = "Log-Minus-Log Plot") %>%  
+      hc_xAxis(title = list(text = "Time"), tickInterval=NULL, tickLength = 5, lineWidth = 1)  %>%  
+      hc_yAxis(title = list(text = "log(-log(survival))"), lineWidth = 1, tickLength = 5, tickWidth= 1, labels = list(format = "{value:.2f}")) %>% 
+      #hc_colors("#440154") %>%
+      hc_add_theme(hc_theme_gridlight()) %>%
+      hc_chart(backgroundColor = "white", zoomType = "xy") %>% 
+      hc_legend(enabled = TRUE) %>% 
+      hc_plotOptions(line = list(dashStyle = "Solid"), area = list(zIndex = 15), series = list(enableMouseTracking = TRUE)) %>% 
+      hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 3, followTouchMove = FALSE, headerFormat = "<b>Time</b>: {point.key} <br>")#, pointFormat = "{series.name}: {point.y}")
+  
+```
+

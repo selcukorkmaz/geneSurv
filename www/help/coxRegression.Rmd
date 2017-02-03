@@ -1,0 +1,500 @@
+### 2.2. Cox Regression
+  
+#### Concept
+
+Cox regression, also known as proportional hazard regression, is a method to investigate the effect of one or multiple factors (i.e. gene expressions) upon the time an event of interest occurs. In this model, the effect of a unit increase in a factor is multiplicative with respect to the hazard rate.
+
+#### Usage  
+  
+A Cox regression analysis can be conducted by applying the following steps:
+
+1. Select the analysis method as `Cox Regression` from `Analysis` tab.
+2. Select suitable variables for the analysis, such as `survival time`, `status variable`, `category value for status variable`, and categorical and continuous predictors for the model.
+3. In advanced options, `interaction terms`, `strata terms` and `time dependent covariates` can be added to the model. Moreover, if there are multiple records for observations, users can specify it by clicking `Multiple ID` checkbox. Furthermore, once can choose model selection criteria, as `AIC` or `p-value`, model selection method, as `backward`, `forward` or `stepwise`, reference category, as `first` or `last`, and ties method, as `Efron`, `Breslow` or `exact` and change the `confidence level`.  
+4. Click `Run` button to run the analysis.
+
+<img src="images/coxRegressionHelp.jpg" alt="Cox Regression help" align="middle" style="width:800px; height:350;"/>
+
+
+#### Outputs
+
+Desired outputs can be selected by clicking Outputs checkbox. Available outputs are coefficient estimates, hazard ratio, goodness of fit tests, analysis of deviance, predictions, residuals, Martingale residuals, Schoenfeld residuals and DfBetas.
+
+
+```{r coxRegression, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE, include=FALSE}
+setwd("~/Dropbox/GSD/Studies/Web-Tools(Devel)/geneSurv/")
+
+    library("DT")
+    library("survival")
+    library("KMsurv")
+    library("survMisc")
+    source("coxRegression.R")
+    source("getDescriptiveResultsCoxRegression.R")
+    source("stepwise.R")
+    source("plotLT.R")
+    require("ggplot2")
+    source("ggsurv.R")
+    source("ggsurv2.R")
+    source("plotSchoenfeld.R")
+    library("magrittr")
+    library("dplyr")
+    library("survminer")
+    library("highcharter")
+
+data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+
+ cox = coxRegression(survivalTime = "dmfs_time", categoricalInput = "ER_IHC", continuousInput = c("ESR1.205225_at", "PGR.208305_at"), statusVariable = "dmfs_event", status = 1, displayDescriptives = TRUE,                       displayCoefficientEstimates = TRUE, displayModelFit = TRUE, hazardRatio = TRUE,               goodnessOfFitTests = TRUE, analysisOfDeviance = TRUE, ties = "efron", data = data)  
+
+```
+
+
+#####a. Coefficient Estimates 
+
+A coefficient estimation table, which includes variable names, coefficient estimates and their associated standard errors, z statistics and p values, can be created.   
+
+```{r displayCoefficientEstimatesResults, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+    coeffResultsCox = cox$testResult$displayCoefficientEstimatesResults
+    DT::datatable(coeffResultsCox, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+                  dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE))
+```
+
+
+
+
+#####b. Hazard ratio 
+
+A hazard ratio table, which includes variable names, hazard ratios and their associated lower and upper limits, can be created.  
+
+
+```{r hazardRatioReactiveCox, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+    hrResultsCox = cox$testResult$hazardRatioResults
+
+      DT::datatable(hrResultsCox, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+  dom = 'Bfrtip',
+  buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
+     ))
+```
+
+
+
+#####c. Hazard plot 
+
+A forest plot can be created for hazard ratios to give them a visual inpection.
+
+```{r hazardPlotCox, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+          cox = cox$testResult$hazardRatioResults
+
+          if(nrow(cox)>1){
+    
+            cox = cbind.data.frame("Variable" = levels(cox$Variable), apply(cox[,-1],2, as.numeric))
+    
+           }else{
+
+            cox = cbind.data.frame("Variable" = levels(cox$Variable), as.data.frame(t(apply(cox[,-1],2, as.numeric))))
+
+           }   
+
+         highchart() %>% hc_exporting(enabled = TRUE, filename = "hazardPlot") %>% 
+          hc_add_series(name = "Hazard", type = "line", data = cox$`Hazard ratio`, showInLegend = FALSE, zIndex = 1, marker = list(lineColor = "black", lineWidth = 1), lineWidth = 0, id = "hazard") %>%
+          hc_add_series(name = "CI", data = as.matrix(cbind(cox$`Lower limit (95%)`, cox$`Upper limit (95%)`)),type = "errorbar", names = "Limits", showInLegend = FALSE, zIndex = 0, lineWidth = 1.5, linkedTo = "hazard") %>%
+          hc_chart(zoomType = "xy", inverted = TRUE) %>%
+          hc_xAxis(categories = matrix(cox$Variable, ncol = 1)) %>%
+          hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Hazard Ratio"), plotLines = list(list(value = 1, width = 2, color = "green", dashStyle = "Dash"))) %>%
+          #hc_plotOptions(tooltip = list(headerFormat = "<b>Time: </b>{point.x}")) %>%
+          hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Variable: </b>{point.x} <br>") %>%
+          hc_plotOptions(line = list(tooltip = list(pointFormat = "<b>{series.name}: </b>{point.y:.3f} ")), 
+                         errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+          hc_add_theme(hc_theme_google())
+```
+
+
+
+#####d. Goodness of Fit Tests
+
+Fitted Cox regression model can be tested with three tests: Likelihood ratio, Wald, Score.
+
+```{r goodnessOfFitTestsCoxsss, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+
+data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+
+ cox = coxRegression(survivalTime = "dmfs_time", categoricalInput = "ER_IHC", continuousInput = c("ESR1.205225_at", "PGR.208305_at"), statusVariable = "dmfs_event", status = 1, displayDescriptives = TRUE,                       displayCoefficientEstimates = TRUE, displayModelFit = TRUE, hazardRatio = TRUE,               goodnessOfFitTests = TRUE, analysisOfDeviance = TRUE, ties = "efron", data = data)  
+
+        goodnessOfFit = cox$testResult$goodnessOfFitTestsResults
+
+ datatable(goodnessOfFit, rownames=FALSE, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE))
+ 
+```
+
+
+#####e. Analysis of Deviance
+
+A deviance analysis can be conducted for each variable in the fitted model.
+
+```{r analysisOfDevianceCox, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+
+data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+
+ cox = coxRegression(survivalTime = "dmfs_time", categoricalInput = "ER_IHC", continuousInput = c("ESR1.205225_at", "PGR.208305_at"), statusVariable = "dmfs_event", status = 1, displayDescriptives = TRUE,                       displayCoefficientEstimates = TRUE, displayModelFit = TRUE, hazardRatio = TRUE,               goodnessOfFitTests = TRUE, analysisOfDeviance = TRUE, ties = "efron", data = data)  
+
+        aod = cox$testResult$analysisOfDevianceResults
+
+ datatable(aod, rownames=FALSE, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE))
+ 
+```
+
+
+
+
+#####f. Predictions
+
+Predictions from the fitted model can be obtained.
+
+```{r storePredictionsCox, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+
+data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+
+ cox = coxRegression(survivalTime = "dmfs_time", categoricalInput = "ER_IHC", continuousInput = c("ESR1.205225_at", "PGR.208305_at"), statusVariable = "dmfs_event", status = 1, displayDescriptives = TRUE, displayCoefficientEstimates = TRUE, displayModelFit = TRUE, hazardRatio = TRUE, goodnessOfFitTests = TRUE, analysisOfDeviance = TRUE, ties = "efron", storePredictions = TRUE, data = data)  
+
+        preds = cox$testResult$Store$Predictions
+
+ datatable(preds, rownames=TRUE, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE))
+ 
+```
+
+
+
+
+#####g. Residuals
+
+Residuals from the fitted model can be obtained.
+
+
+```{r storeResidualsCox, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+
+ cox = coxRegression(survivalTime = "dmfs_time", categoricalInput = "ER_IHC", continuousInput = c("ESR1.205225_at", "PGR.208305_at"), statusVariable = "dmfs_event", status = 1, displayDescriptives = TRUE, displayCoefficientEstimates = TRUE, displayModelFit = TRUE, hazardRatio = TRUE, goodnessOfFitTests = TRUE, analysisOfDeviance = TRUE, ties = "efron", storeResiduals = TRUE, data = data)  
+
+        residuals = cox$testResult$Store$Residuals
+
+ datatable(residuals, rownames=TRUE, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE))
+ 
+```
+
+
+
+
+#####h. Martingale Residuals
+
+Martingale residuals from the fitted model can be obtained.
+
+```{r storeMartingaleResidualsCox, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+
+data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+
+ cox = coxRegression(survivalTime = "dmfs_time", categoricalInput = "ER_IHC", continuousInput = c("ESR1.205225_at", "PGR.208305_at"), statusVariable = "dmfs_event", status = 1, displayDescriptives = TRUE, displayCoefficientEstimates = TRUE, displayModelFit = TRUE, hazardRatio = TRUE, goodnessOfFitTests = TRUE, analysisOfDeviance = TRUE, ties = "efron", storeMartingaleResiduals = TRUE, data = data)  
+ 
+
+ martingaleResiduals = cox$testResult$Store$MartingaleResiduals
+
+ datatable(martingaleResiduals, rownames=TRUE, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE))
+ 
+```
+
+
+#####i. Schoenfeld Residuals
+
+Schoenfeld residuals from the fitted model can be obtained.
+
+```{r storeSchoenfeldResidualsCox, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+
+data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+
+ cox = coxRegression(survivalTime = "dmfs_time", categoricalInput = "ER_IHC", continuousInput = c("ESR1.205225_at", "PGR.208305_at"), statusVariable = "dmfs_event", status = 1, displayDescriptives = TRUE, displayCoefficientEstimates = TRUE, displayModelFit = TRUE, hazardRatio = TRUE, goodnessOfFitTests = TRUE, analysisOfDeviance = TRUE, ties = "efron", storeSchoenfeldResiduals = TRUE, data = data)  
+ 
+
+ storeSchoenfeldResiduals = cox$testResult$Store$SchoenfeldResiduals
+
+ datatable(storeSchoenfeldResiduals, rownames=TRUE, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE))
+ 
+```
+
+
+
+
+#####j. DfBetas
+
+DfBetas residuals from the fitted model can be obtained.
+
+
+```{r storeDfBetasCox, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+
+data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+
+ cox = coxRegression(survivalTime = "dmfs_time", categoricalInput = "ER_IHC", continuousInput = c("ESR1.205225_at", "PGR.208305_at"), statusVariable = "dmfs_event", status = 1, displayDescriptives = TRUE, displayCoefficientEstimates = TRUE, displayModelFit = TRUE, hazardRatio = TRUE, goodnessOfFitTests = TRUE, analysisOfDeviance = TRUE, ties = "efron", storeDfBetas = TRUE, data = data)  
+ 
+ DfBetas = cox$testResult$Store$DfBetas
+
+ datatable(DfBetas, rownames=TRUE, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE))
+ 
+```
+
+#####k. Proportional Hazard Assumption
+
+<img src="images/coxPhHelp.jpg" alt="Cox Regression help" align="middle" style="width:800px; height:350;"/>
+
+#####l. Proportional Hazard Test
+
+To check the proportionality assumption of Cox regression model, a proportional hazard test can be conducted both globally and for each variable in the fitted model. 
+
+```{r phTest, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+
+data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+
+ cox = coxRegression(survivalTime = "dmfs_time", categoricalInput = "ER_IHC", continuousInput = c("ESR1.205225_at", "PGR.208305_at"), statusVariable = "dmfs_event", status = 1, displayDescriptives = TRUE, displayCoefficientEstimates = TRUE, displayModelFit = TRUE, hazardRatio = TRUE, goodnessOfFitTests = TRUE, analysisOfDeviance = TRUE, ties = "efron", storeDfBetas = TRUE, data = data)  
+
+        coxPhTest = cox$testResult$displayCoxPh
+
+ datatable(coxPhTest, rownames=TRUE, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE))
+ 
+```
+
+
+
+
+#####m. Schoenfeld Plot
+
+Beside a formal test for proportionality assumption, a Schoenfeld plot can be created to check the assumption visually.
+
+```{r schoenfeldPlot, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+          compareCurves = cox$model
+          x <- cox.zph(compareCurves, transform = 'rank')
+    
+          resid = TRUE
+          se = TRUE
+          df = 4
+          nsmo = 40
+          ltyest = "Solid"
+          ltyci = "Solid"
+          col = 1
+          colorLine = "#204BD9"
+          colorLineCI = "#59A819"
+
+          lwd=1
+
+          lty = ltyest
+          xx <- x$x
+          yy <- x$y
+          d <- nrow(yy)
+          df <- max(df)     
+          nvar <- ncol(yy)
+          pred.x <- seq(from=min(xx), to=max(xx), length=nsmo)
+          temp <- c(pred.x, xx)
+          lmat <- splines::ns(temp, df=df, intercept=TRUE)
+          pmat <- lmat[1:nsmo,]       
+          xmat <- lmat[-(1:nsmo),]
+          qmat <- qr(xmat)
+          yvar = x$y
+          var = ncol(yvar)
+    
+          if (qmat$rank < df) {stop("Spline fit is singular, try a smaller degrees of freedom")}
+    
+          if (se) {
+            bk <- backsolve(qmat$qr[1:df, 1:df], diag(df))
+            xtx <- bk %*% t(bk)
+            seval <- d*((pmat%*% xtx) *pmat) %*% rep(1, df)
+          }
+    
+          if (missing(var)) {var <- 1:nvar}else {
+            if (is.character(var)) {var <- match(var, dimnames(yy)[[2]])}
+            if  (any(is.na(var)) || max(var)>nvar || min(var) <1) {stop("Invalid variable requested")}
+          }
+    
+          if (x$transform == 'log') {
+            xx <- exp(xx)
+            pred.x <- exp(pred.x)
+          }
+          if(x$transform != 'identity') {
+            xtime <- as.numeric(dimnames(yy)[[1]])
+            indx <- !duplicated(xx) 
+            apr1  <- approx(xx[indx], xtime[indx], 
+                            seq(min(xx), max(xx), length=17)[2*(1:8)])
+            temp <- signif(apr1$y,2)
+            apr2  <- approx(xtime[indx], xx[indx], temp)
+            xaxisval <- apr2$y
+            xaxislab <- rep("",8)
+            for (i in 1:8) {xaxislab[i] <- format(temp[i])}
+          }
+    
+          col <- rep(col, length=2)
+          lwd <- rep(lwd, length=2)
+          lty <- rep(lty, length=2)
+    
+    
+          svar = "ESR1.205225_at"
+    
+    
+          for (i in 1:var) {
+            y <- yy[,svar]
+            yhat <- pmat %*% qr.coef(qmat, y)
+            if (resid) {yr <-range(yhat, y)}else{yr <-range(yhat)}
+            if (se) {
+              temp <- 2* sqrt(x$var[i,i]*seval)
+              yup <- yhat + temp
+              ylow<- yhat - temp
+              yr <- range(yr, yup, ylow)
+              newData2 = cbind.data.frame(pred.x,yhat, yup, ylow) 
+
+            }
+            
+            newData = cbind.data.frame(xx, y)
+            newData3 = cbind.data.frame(pred.x, yhat)
+
+            
+           
+           fn =  paste0("function() {\n if (this.value == ", xaxisval[1], ") {return ",xaxislab[1], "}\n  
+                    if (this.value == ", xaxisval[2], ") {return ",xaxislab[2], "}\n
+                    if (this.value == ", xaxisval[3], ") {return ",xaxislab[3], "}\n
+                    if (this.value == ", xaxisval[4], ") {return ",xaxislab[4], "}\n
+                    if (this.value == ", xaxisval[5], ") {return ",xaxislab[5], "}\n
+                    if (this.value == ", xaxisval[6], ") {return ",xaxislab[6], "}\n
+                    if (this.value == ", xaxisval[7], ") {return ",xaxislab[7], "}\n
+                    if (this.value == ", xaxisval[8], ") {return ",xaxislab[8], "}\n
+                   ", "}"
+                  )
+            
+      
+         ylabel =  paste0("Scaled Schoenfeld residuals for ", svar)
+  
+
+              sp = highchart() %>% 
+                hc_add_series(name = "Curve", data = as.matrix(newData3), type = "line",  enabled = FALSE, color = "#204BD9", marker = list(enabled = FALSE), id = "schoenLine")%>%
+                hc_xAxis(tickInterval=NULL, tickLength = 5, lineWidth = 1, tickPositions = xaxisval, labels = list(formatter = JS(fn), format = "{value:.2f}"), title = list(text = "Time"))%>%
+                hc_yAxis(tickInterval=NULL, tickLength = 5, lineWidth = 1, title = list(text = ylabel), labels = list(format = "{value:.2f}"))%>% 
+                hc_title(text = "Schoenfeld Plot") %>%
+                hc_add_theme(hc_theme_google()) %>%
+                hc_plotOptions(line = list(dashStyle = "Solid")) %>%
+                hc_chart(backgroundColor = "#FFFFFF", zoomType = "xy") %>%
+                hc_tooltip(shared = TRUE, crosshairs = FALSE, valueDecimals = 2, followTouchMove = FALSE)
+
+          
+              
+              if (resid){
+                sp = sp %>%  hc_add_series(name = "Residuals", data = as.matrix(newData), type="scatter",  labels = list(format = "{value:.2f}"), color = "#000000", zIndex = 10, marker = list(symbol = "circle", radius = 4))
+              }
+              
+              if (se){
+                
+                sp = sp %>% hc_add_series(name = "CI", data = as.matrix(cbind(newData2$pred.x, newData2$ylow, newData2$yup)),
+                                     type = "arearange", fillOpacity = 0.4, showInLegend = FALSE, linkedTo = "schoenLine", color ="#59A819")
+                
+              }
+              
+              sp = sp %>% hc_exporting(enabled = TRUE, filename = "schoenfeldplot") 
+          }
+          
+          sp
+ 
+```
+
+
+
+
+#####n. Log-Minus-Log Plot
+
+Another useful plot for checking proportionality assumption is log-minus-log plot. Lines should be parallel to each other to satisfy proportionality. 
+
+```{r lmlPlotCox, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+
+    survivalTime = "dmfs_time"
+    statusVariable  = "dmfs_event"
+    status = 1
+
+    rnames = colnames(data)
+    fctr = "ER_IHC"
+
+    fctr = rnames[which.max(RecordLinkage::levenshteinSim(fctr,rnames))]
+
+    #ci = input$ciKM
+    #varianceEstimation = input$varianceEstimationKM
+    #confidenceLevel = input$confidenceLevelKM
+    factors = fctr
+
+
+    if(!is.null(survivalTime)){
+        survivalTime = as.matrix(data[, survivalTime, drop = FALSE])
+    }
+
+    if(!is.null(factors)){
+        factors = as.factor(data[, factors])
+    }
+
+
+    if(!is.null(statusVariable)){
+        statusVariable = data[, statusVariable]   
+    }
+
+    if(!is.null(status)){
+        if(is.numeric(status)){status = as.factor(status)}else{status = as.factor(status)}
+    }
+
+    if(!is.null(factors)){
+        newData = data.frame(id =seq(1,dim(survivalTime)[1], 1), survivalTime= survivalTime,
+        statusVar=statusVariable,factor = factors)
+        newData = newData[complete.cases(newData),]
+        colnames(newData) = c("id", "time", "statusVar", "factor")
+
+    }
+
+    newData$statusVar = newData$statusVar%in%status
+
+    if(!is.null(fctr)){
+
+        compareCurves <- survfit(Surv(time, statusVar == TRUE) ~ factors, data = newData)
+
+
+
+        for(i in 1:length(names(compareCurves$strata))) {
+          
+            names(compareCurves$strata)[i] = gsub("factors", fctr, names(compareCurves$strata)[i])
+          
+        }
+
+
+    }
+
+
+        p = hchart(compareCurves, fun = "cloglog", ranges = FALSE, type = "line", animation = TRUE, rangesOpacity = 0.4)
+
+p %>% hc_exporting(enabled = TRUE, filename = "plot") %>% 
+      hc_title(text = "Log-Minus-Log Plot") %>%  
+      hc_xAxis(title = list(text = "Time"), tickInterval=NULL, tickLength = 5, lineWidth = 1)  %>%  
+      hc_yAxis(title = list(text = "log(-log(survival))"), lineWidth = 1, tickLength = 5, tickWidth= 1, labels = list(format = "{value:.2f}")) %>% 
+      #hc_colors("#440154") %>%
+      hc_add_theme(hc_theme_google()) %>%
+      hc_chart(backgroundColor = "white", zoomType = "xy") %>% 
+      hc_legend(enabled = TRUE) %>% 
+      hc_plotOptions(line = list(dashStyle = "Solid"), area = list(zIndex = 15), series = list(enableMouseTracking = TRUE)) %>% 
+      hc_tooltip(shared = TRUE, crosshairs = TRUE, valueDecimals = 3, followTouchMove = FALSE, headerFormat = "<b>Time</b>: {point.key} <br>")
+
+   
+
+
+  
+ 
+```
+
+

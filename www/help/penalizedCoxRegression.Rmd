@@ -1,0 +1,128 @@
+### 2.3. Penalized Cox Regression
+
+#### Concept
+
+Feature selection is an useful strategy to avoid over-fitting, to obtain more reliable predictive results, and to provide more insights into the underlying casual relationships <a href ="https://www.ncbi.nlm.nih.gov/pubmed/18562478" target = "_blank" > (Ma and Huang, 2008)</a>. In this section, a feature selection can be performed using ridge, elastic net or lasso penalty, especially when there are too many predictors (e.g. `n<<p`). More information can be found in <a href ="http://users.stat.umn.edu/~zouxx019/Papers/elasticnet.pdf" target = "_blank" > Zou and Hastie, 2005</a>, <a href ="http://www.jstatsoft.org/v33/i01/" target = "_blank" > Freidman et al, 2008</a> and <a href ="http://www.jstatsoft.org/v39/i05/" target = "_blank" > Simon et al, 2011</a>.
+
+#### Usage
+
+A Penalized Cox regression analysis can be conducted by applying the following steps:
+
+1. Select the analysis method as `Penalized Cox Regression` from `Analysis` tab.
+2. Select suitable variables for the analysis, such as `survival time`, `status variable`
+3. If all predictors are continious then one can check the `Select All Variables` option to include all variables in dataset to the feature selection process. If some predictors categorical and others are continious, then uncheck the `Select All Variables` option and select categorical and continuous variables seperately.
+4. Define the penalty term using the `Penalty term` slider as follow:
+
+`Penalty term = 0`: ridge penalty
+`0 < Penalty term < 1`: elastic net penalty
+`Penalty term = 1`: lasso penalty
+
+5. Select the number of folds for cross-validation. Note that number of folds must be greater than 3.
+6. Click `Run` button to run the analysis.
+
+
+<img src="images/regCoxReg.jpg" alt="Cox Regression help" align="middle" style="width:800px; height:350;"/>
+
+
+#### Outputs
+
+#####a) Variables in the model
+
+Variable selection is conducted with the selected penalized method (i.e. ridge, elasticnet, lasso) and results will be displayed as a table, which includes selected variables and their associated coefficient estimates. 
+
+```{r regCoxReg, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+  library("DT")
+  library("highcharter")
+  library("survival")
+  library("glmnet")
+  data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+  data = data[,-1]
+  
+  survivalTimerCox = "dmfs_time"
+  survivalStatusrCox = "dmfs_event"
+
+   regCoxList = list()
+
+   indx = !(colnames(data) %in% c(survivalTimerCox, survivalStatusrCox))
+   x = data.matrix(data[,indx, drop = FALSE])
+   y= Surv(data[,survivalTimerCox], data[,survivalStatusrCox])
+   
+   
+    set.seed(1234)
+      cvFit = cv.glmnet(x, y, family = "cox", alpha = 0.2)
+      coefficients = as.data.frame(as.matrix(coef(cvFit, s = cvFit$lambda.min)))
+      coefficients$`1` = as.numeric(formatC(coefficients$`1`, digits = 3, format = "f"))
+
+      coefficients2 = data.frame(rownames(coefficients), coefficients[,1])
+      coefficients3 = coefficients2[coefficients2[2] != 0,]
+      colnames(coefficients3) = c("Variable", "Coefficient estimate")
+
+
+
+      varsNotInTheModel = coefficients2[coefficients2[2] == 0,]
+
+      if(nrow(varsNotInTheModel) > 0){
+        varsNotInTheModel$coefficients...1. = formatC(varsNotInTheModel$coefficients...1., digits = 3, format = "f")
+        colnames(varsNotInTheModel) = c("Variable", "Coefficient estimate")
+      }else{
+
+        varsNotInTheModel = NULL
+      }
+
+      regCoxList = list(coefficients3, varsNotInTheModel)
+      
+      datatable(regCoxList[[1]], extensions = c('Buttons','KeyTable', 'Responsive'),                  options = list(dom = 'Bfrtip',buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE)) 
+
+
+```
+
+
+
+
+*
+
+#####b) Cross-validation curve
+
+A cross-validation curve can be created to investigate the relationship between partial likelihood devaince and lambda values. 
+
+```{r regCoxRegPlot, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
+
+  library("glmnet")
+  data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
+  data = data[,-1]
+  
+  survivalTimerCox = "dmfs_time"
+  survivalStatusrCox = "dmfs_event"
+
+      regCoxList = list()
+
+
+            indx = !(colnames(data) %in% c(survivalTimerCox, survivalStatusrCox))
+
+            x = data.matrix(data[,indx, drop = FALSE])
+
+            y= Surv(data[,survivalTimerCox], data[,survivalStatusrCox])
+
+      
+
+      set.seed(1234)
+
+      cvFit = cv.glmnet(x, y, family = "cox", alpha = 1, type.measure = "deviance", nfolds = as.numeric(10))
+
+
+      highchart() %>% hc_exporting(enabled = TRUE, filename = "lambdaPlot") %>% 
+        hc_add_series(name = "CI", type = "line", data = sort(cvFit$cvm), showInLegend = FALSE, zIndex = 1, marker = list(lineColor = "black", lineWidth = 1), lineWidth = 0, id = "survival") %>%
+        hc_add_series(name = "CI", data = as.matrix(cbind(sort(cvFit$cvlo), sort(cvFit$cvup))),type = "errorbar", names = "Limits", showInLegend = FALSE, zIndex = 0, lineWidth = 1.5, linkedTo = "survival") %>%
+        hc_chart(zoomType = "xy", inverted = FALSE) %>%
+        hc_xAxis(categories = sort(round(log(cvFit$lambda), 1)), title = list(text = "log(Lambda)")) %>%
+        hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Partial Likelihood Deviance")) %>%
+        #hc_plotOptions(tooltip = list(headerFormat = "<b>Time: </b>{point.x}")) %>%
+        hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Partial Likelihood Deviance: </b>{point.x} <br>") %>%
+        hc_plotOptions(line = list(tooltip = list(pointFormat = "<b>{series.name}: </b>{point.y:.3f} ")), 
+                       errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+        hc_add_theme(hc_theme_google())
+
+```
+
+

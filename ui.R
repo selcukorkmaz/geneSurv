@@ -58,7 +58,12 @@ library("knitr")
 
             HTML('<p>You can upload your data as separated by comma, tab, semicolon or space.</p>'),
             HTML('<p>Note: First row must be header.</p>')
-           )
+           ),
+          
+          actionButton(inputId = "helpDataUpload", label = "Help", icon = icon("question-sign", lib = "glyphicon"),
+                       onclick ="window.open('/help/dataUpload.html', '_blank')")
+          
+
         ),
          ################################# Data Upload (end) #####################################
 
@@ -206,7 +211,15 @@ library("knitr")
                  )
               ),
 
-            actionButton(inputId = "runKM", label = "Run", icon = icon("play", lib = "glyphicon"))
+            
+            fluidRow(column(4,actionButton(inputId = "helpKaplanMeier", label = "Help", icon = icon("question-sign", lib = "glyphicon"),
+                                           onclick ="window.open('/help/kaplanMeier.html', '_blank')")),
+                     column(4,actionButton(inputId = "runKM", label = "Run", icon = icon("play", lib = "glyphicon"))))
+            
+            
+            
+            
+            
 
            ),
 
@@ -318,7 +331,11 @@ library("knitr")
                 #)
             ),
 
-            actionButton(inputId = "runCox", label = "Run", icon = icon("play", lib = "glyphicon"))
+
+            fluidRow(column(4,actionButton(inputId = "helpCoxRegression", label = "Help", icon = icon("question-sign", lib = "glyphicon"),
+                                           onclick ="window.open('/help/coxRegression.html', '_blank')")),
+                     column(4,actionButton(inputId = "runCox", label = "Run", icon = icon("play", lib = "glyphicon"))))
+            
         
            ),
 
@@ -351,7 +368,12 @@ library("knitr")
 
                   numericInput("nFold", "Number of folds for cross-validation", value = 10, min = 3, step = 1),
               
-                  actionButton("runRegularized", "Run")
+
+                  fluidRow(column(4,actionButton(inputId = "helpCoxRegression", label = "Help", icon = icon("question-sign", lib = "glyphicon"),
+                                                 onclick ="window.open('/help/penalizedCoxRegression.html', '_blank')")),
+                           column(4,actionButton(inputId = "runRegularized", label = "Run", icon = icon("play", lib = "glyphicon"))))
+                  
+                  
 
               )
           ),
@@ -469,7 +491,10 @@ library("knitr")
 
                  ),
                  
-                 actionButton(inputId = "runRF", label = "Run", icon = icon("play", lib = "glyphicon"))
+                 fluidRow(column(4,actionButton(inputId = "helpCoxRegression", label = "Help", icon = icon("question-sign", lib = "glyphicon"),
+                                                onclick ="window.open('/help/randomForestSurvival.html', '_blank')")),
+                          column(4,actionButton(inputId = "runRF", label = "Run", icon = icon("play", lib = "glyphicon"))))
+                 
                  
           ),
           
@@ -507,9 +532,12 @@ library("knitr")
                 numericInput("CLcutoff",label = "Confidence level",value = 95, min=1, max=100)
                 
               ),
-                actionButton(inputId = "runCutoff", label = "Run", icon = icon("play", lib = "glyphicon"))
-                
-                
+            
+            fluidRow(column(4,actionButton(inputId = "helpCoxRegression", label = "Help", icon = icon("question-sign", lib = "glyphicon"),
+                                           onclick ="window.open('/help/cutoffValue.html', '_blank')")),
+                     column(4,actionButton(inputId = "runCutoff", label = "Run", icon = icon("play", lib = "glyphicon"))))
+            
+            
             )
           
 
@@ -552,7 +580,7 @@ This tool provides a wide range of survival analysis methods for genomic researc
               HTML('<p align="justify"> <b> Optimal cutoff:</b> determination of optimal cutoff value by maxmizing test statistics, including log-rank, Gehan-Breslow, Tarone-Ware, Peto-Peto, modified Peto-Peto, Flemington-Harrington.</p>'),
            
            
-              HTML('<p align="justify"> All source codes are in <a href="https://github.com/selcukorkmaz/compSurv" target="_blank"><b>GitHub</b></a>. Please see the <a href="help.html" target="_blank"> <b>help page</b></a> for more detailed information.</p>'),
+              HTML('<p align="justify"> All source codes are in <a href="https://github.com/selcukorkmaz/compSurv" target="_blank"><b>GitHub</b></a>. Please see the <a href="help/help.html" target="_blank"> <b>help page</b></a> for more detailed information.</p>'),
 
               HTML('<p><div align = "center"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/kmPlot.jpg" width="300" height="200" ></td><td><img src="images/schoenfeldPlot.jpg" width="300" height="200"></td><td><img src="images/lmlPlot.jpg" width="300" height="200"></td></tr></table></div></p>'),
 
