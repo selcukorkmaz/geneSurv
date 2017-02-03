@@ -10,7 +10,7 @@ cuttOffForSurvival <- function(markers, survivalTime, statusVariable, status, co
   survivalTimeName <- names(survivalTimeData)
   endtime = max(survivalTimeData[,1])
   optimalCutoffs <- matrix(nrow= length(markers), ncol=8)
-  colnames(optimalCutoffs) <- c("Optimal cut-off", "HR", "HR (lower)", "HR (upper)", "Mean survival time (factor = 0)", "Mean survival time (factor = 1)",  "testStatistic", "p value")
+  colnames(optimalCutoffs) <- c("Optimal cut-off", "HR", "HR (lower)", "HR (upper)", "Mean survival time (low expression)", "Mean survival time (high expression)",  "testStatistic", "p value")
   optimalCutoffList = list()
   
   for(m in 1:ncol(markerData)){

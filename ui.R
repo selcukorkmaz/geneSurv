@@ -525,24 +525,19 @@ library("knitr")
 
 	mainPanel(
 
-    navbarPage("geneSurv: Survival Analysis Tool for Genetics", id="tabs1", inverse = TRUE, collapsible = TRUE, fluid = TRUE, position = "fixed-top", class("navbar navbar-inverse"),
+    navbarPage("geneSurv: Survival Analysis Tool for Genomics", id="tabs1", inverse = TRUE, collapsible = TRUE, fluid = TRUE, position = "fixed-top", class("navbar navbar-inverse"),
 
  
 
          tabPanel("About",
 
            #br(),
-           h4(tags$b('An interactive tool for survival analysis in genomic researchs')),
+           h4(tags$b('An interactive tool for survival analysis in genomics research')),
 
-             HTML('<p align="justify">This tool provides a wide range of survival analysis methods for genomic studies. The tool includes analysis methods including Kaplan-Meier, Cox regression, Penalized Cox regression and Random Survival Forests</p>'),
+             HTML('<p align="justify">Survival analysis is often used in cancer studies. It has been shown that combination of clinical data with genomics increases predictive performance of survival analysis methods. 
+This tool provides a wide range of survival analysis methods for genomic research, especially in cancer studies. The tool includes analysis methods including Kaplan-Meier, Cox regression, Penalized Cox regression and Random Survival Forests. It also offers methods for optimal cutoff point determination for continuous markers. </p>'),
 
-
-            #br(),
-
-           h4(tags$b('An interactive tool for survival analysis!')),
-
-              HTML('<p align="justify"> Here we developed an easy-to-use, up-to-date, comprehensive and interactive web-based tool for survival analysis. This tool includes
-                analysis procedures for life table, Kaplan-Meier and Cox regression. Each procedure includes following features:</p>'),
+              HTML('<p align="justify">Each procedure includes following features:</p>'),
 
               HTML('<p align="justify"> <b> Kaplan-Meier:</b> descriptive statistics, survival table, mean and median life time, hazard ratios, comparison tests
                 including Log-rank, Gehan-Breslow, Tarone-Ware, Peto-Peto, Modified Peto-Peto, Flemington-Harrington, and interactive plots such as Kaplan-Meier curves and hazard plots.</p>'),
@@ -550,6 +545,13 @@ library("knitr")
               HTML('<p align="justify"> <b> Cox regression:</b> coefficient estimates, hazard ratios, goodness of fit test, analysis of deviance, save predictions, save residuals,
                 save Martingale residuals, save Schoenfeld residuals, save dfBetas, proportional hazard assumption test, and interactive plots including Schoenfeld residual plot and Log-Minus-Log plot.</p>'),
 
+              HTML('<p align="justify"> <b> Penalized Cox regression:</b> feature selection using ridge, elastic net and lasso penalization. A cross-validation to investigate the relationship between partial likelihood devaince and lambda values.</p>'),
+           
+              HTML('<p align="justify"> <b> Random survival forests:</b> individual survival predictions, individual cumulative hazard predictions, error rate, variable importance, and interactive plots including random survival plot, cumulative hazard plot, error rate plot, Cox vs RSF plot</p>'),
+           
+              HTML('<p align="justify"> <b> Optimal cutoff:</b> determination of optimal cutoff value by maxmizing test statistics, including log-rank, Gehan-Breslow, Tarone-Ware, Peto-Peto, modified Peto-Peto, Flemington-Harrington.</p>'),
+           
+           
               HTML('<p align="justify"> All source codes are in <a href="https://github.com/selcukorkmaz/compSurv" target="_blank"><b>GitHub</b></a>. Please see the <a href="help.html" target="_blank"> <b>help page</b></a> for more detailed information.</p>'),
 
               HTML('<p><div align = "center"><table cellpadding="0" cellspacing="0"><tr><td><img src="images/kmPlot.jpg" width="300" height="200" ></td><td><img src="images/schoenfeldPlot.jpg" width="300" height="200"></td><td><img src="images/lmlPlot.jpg" width="300" height="200"></td></tr></table></div></p>'),
@@ -754,9 +756,9 @@ library("knitr")
                           fluidRow(
                               column(4, shinyjs::colourInput("backgroundKM", "Plot background color", value = "white")),
 
-                              column(4, selectInput("changeTheme", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
-                                "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
-                                "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
+                              column(4, selectInput("changeTheme", "Select a theme", choices = c("Default" = "theme0", "Theme1" = "theme1", "Theme2" = "theme2", 
+                                                                                                 "Theme3" = "theme3", "Theme4" = "theme4", "Theme5" = "theme5", "Theme6" = "theme6", "Theme7" = "theme7", 
+                                                                                                 "Theme8" = "theme8", "Theme9" = "theme9", "Theme10" = "theme10", "Theme11" = "theme11"), 
                               selected = "theme0"))
                         )
 
@@ -804,9 +806,9 @@ library("knitr")
                           fluidRow(
                               column(4, shinyjs::colourInput("backgroundHazard", "Plot background color", value = "white")),
 
-                              column(4, selectInput("changeThemeHazard", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
-                                "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
-                                "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
+                              column(4, selectInput("changeThemeHazard", "Select a theme", choices = c("Default" = "theme0", "Theme1" = "theme1", "Theme2" = "theme2", 
+                                                                                                       "Theme3" = "theme3", "Theme4" = "theme4", "Theme5" = "theme5", "Theme6" = "theme6", "Theme7" = "theme7", 
+                                                                                                       "Theme8" = "theme8", "Theme9" = "theme9", "Theme10" = "theme10", "Theme11" = "theme11"), 
                               selected = "theme0"))
                         )
                         ), 
@@ -851,9 +853,9 @@ library("knitr")
                  fluidRow(
                    column(4, shinyjs::colourInput("backgroundLml", "Plot background color", value = "white")),
                    
-                   column(4, selectInput("changeThemeLml", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
-                                                                                            "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
-                                                                                            "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
+                   column(4, selectInput("changeThemeLml", "Select a theme", choices = c("Default" = "theme0", "Theme1" = "theme1", "Theme2" = "theme2", 
+                                                                                         "Theme3" = "theme3", "Theme4" = "theme4", "Theme5" = "theme5", "Theme6" = "theme6", "Theme7" = "theme7", 
+                                                                                         "Theme8" = "theme8", "Theme9" = "theme9", "Theme10" = "theme10", "Theme11" = "theme11"), 
                                          selected = "theme0"))
                  )
                 ) #End for LML options
@@ -990,9 +992,9 @@ library("knitr")
                                     fluidRow(
                                       column(4, shinyjs::colourInput("backgroundSchoenfeldLml", "Plot background color", value = "white")),
                                       
-                                      column(4, selectInput("changeThemeSchoenfeldLml", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
-                                                                                                            "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
-                                                                                                            "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
+                                      column(4, selectInput("changeThemeSchoenfeldLml", "Select a theme", choices = c("Default" = "theme0", "Theme1" = "theme1", "Theme2" = "theme2", 
+                                                                                                                      "Theme3" = "theme3", "Theme4" = "theme4", "Theme5" = "theme5", "Theme6" = "theme6", "Theme7" = "theme7", 
+                                                                                                                      "Theme8" = "theme8", "Theme9" = "theme9", "Theme10" = "theme10", "Theme11" = "theme11"), 
                                                             selected = "theme0"))
                                     )
 
@@ -1043,9 +1045,9 @@ library("knitr")
 
                                     fluidRow(
                                       column(4,shinyjs::colourInput("backgroundSchoenfeld", "Choose background color", value = "#FFFFFF")),
-                                      column(4, selectInput("changeThemeSchoenfeld", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
-                                        "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
-                                        "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
+                                      column(4, selectInput("changeThemeSchoenfeld", "Select a theme", choices = c("Default" = "theme0", "Theme1" = "theme1", "Theme2" = "theme2", 
+                                                                                                                   "Theme3" = "theme3", "Theme4" = "theme4", "Theme5" = "theme5", "Theme6" = "theme6", "Theme7" = "theme7", 
+                                                                                                                   "Theme8" = "theme8", "Theme9" = "theme9", "Theme10" = "theme10", "Theme11" = "theme11"), 
                                       selected = "theme0"))
                                       
                                     )                            
@@ -1109,7 +1111,7 @@ library("knitr")
                tabPanel('Plots',
 
 
-                    selectInput("selectRFPlot", "Select a plot", choices = list("Survival" = 1, "Survival OOB" = 2, "Hazard" = 3, "Hazard OOB" = 4, "Error rate" = 5, "Cox vs RSF" = 6), selected = 1), 
+                    selectInput("selectRFPlot", "Select a plot", choices = list("Overall Survival" = 7, "Individual Survival" = 1, "Individual Survival OOB" = 2, "Individual Cumulative Hazard" = 3, "Individual Cumulative Hazard OOB" = 4, "Error rate" = 5, "Cox vs RSF" = 6), selected = 7), 
 
                     conditionalPanel(condition = "input.selectRFPlot == 1" ,
                         selectInput("selectObs", "Select cases for survival curves", choices = list("All" = 1, "Range" = 2, "Custom" = 3), selected = 1), 
@@ -1252,9 +1254,9 @@ library("knitr")
                                                         fluidRow(
                                                           column(4, shinyjs::colourInput("backgroundKMForCutoff", "Plot background color", value = "white")),
                                                           
-                                                          column(4, selectInput("changeThemeForCutoffs", "Select a theme", choices = c("Default" = "theme0", "Five Thirty Eight" = "theme1", "Economist" = "theme2", 
-                                                                                                                                      "Financial Times" = "theme3", "Dotabuff" = "theme4", "Flat" = "theme5", "Flat Dark" = "theme6", "Simple" = "theme7", 
-                                                                                                                                      "Elementary" = "theme8", "Google" = "theme9", "Grid Light" = "theme10", "Sand Signika" = "theme11"), 
+                                                          column(4, selectInput("changeThemeForCutoffs", "Select a theme", choices = c("Default" = "theme0", "Theme1" = "theme1", "Theme2" = "theme2", 
+                                                                                                                                       "Theme3" = "theme3", "Theme4" = "theme4", "Theme5" = "theme5", "Theme6" = "theme6", "Theme7" = "theme7", 
+                                                                                                                                       "Theme8" = "theme8", "Theme9" = "theme9", "Theme10" = "theme10", "Theme11" = "theme11"), 
                                                                                 selected = "theme0"))
                                                         )
                                                         

@@ -23,9 +23,10 @@ shinyServer(function(input, output, session) {
     library("randomForestSRC")
     library("pec")
     library("knitr")
+    library("parallel")
     source("cuttOffForSurvival.R")
-
-
+    source("get.event.info.R")
+    
 
    dataM <- reactive({  ## Data input.
        if(input$dataInput==1){  ## Load example data.
@@ -2832,65 +2833,65 @@ output$str <- renderPrint({
 
 output$indSurvPreds <- renderText({
 
-   if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
+   # if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
 
     if (input$runRF && input$survivalResultRF){
         'Table 1: Individual Survival Predictions'
     }
-  }
+  # }
 })
 
 
 output$indSurvPredsOOB <- renderText({
 
-   if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
+   # if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
 
     if (input$runRF && input$survivalResultOobRF){
         'Table 2: Individual Survival Predictions OOB'
     }
-  }
+  # }
 })
 
 output$indChfPreds <- renderText({
 
-   if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
+   # if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
 
     if (input$runRF && input$chRF){
         'Table 4: Individual Cumulative Hazard Predictions'
     }
-  }
+  # }
 })
 
 
 output$indChfPredsOOB <- renderText({
 
-   if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
+   # if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
 
     if (input$runRF && input$chOobRF){
         "Table 5: Individual Cumulative Hazard Predictions OOB"
     }
-  }
+  # }
 })
 
 output$errorRateText <- renderText({
 
-   if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
+   # if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
 
     if (input$runRF && input$errorRateRF){
         "Table 6: Error Rate"
     }
-  }
+  # }
 })
 
 
 output$varImpText <- renderText({
 
-   if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
+   # if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
 
     if (input$runRF && input$varImp){
         "Table 7: Variable Importance"
     }
-  }
+  # }
 })
 
 
@@ -3249,7 +3250,7 @@ randomForestSurvival <- reactive({
          })
 
 
-         output$chfOOB <- DT::renderDataTable({
+  output$chfOOB <- DT::renderDataTable({
 
             if(input$chOobRF  && input$runRF){
 
@@ -3300,7 +3301,7 @@ randomForestSurvival <- reactive({
 
 
 
-output$variableImportancePlot <- renderHighchart({
+  output$variableImportancePlot <- renderHighchart({
 
  if(input$varImp  && input$runRF){
       importance = as.numeric(formatC(randomForestSurvival()$importance, digits = 3, format = "f"))
@@ -3481,11 +3482,11 @@ output$variableImportancePlot <- renderHighchart({
 
               legend = if(input$selectObsHazard == 1){FALSE}else{TRUE}
 
-              highchart() %>% hc_exporting(enabled = TRUE, filename = "survivalRFPlot") %>% 
+              highchart() %>% hc_exporting(enabled = TRUE, filename = "cumhazRFPlot") %>% 
                 hc_add_series_list(lst =hazardList) %>%
                 hc_chart(zoomType = "xy", inverted = FALSE) %>%
                 hc_xAxis(categories = NULL, title = list(text = "Time")) %>%
-                hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Survival"))%>%
+                hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Cumulative Hazard"))%>%
                 hc_legend(enabled = legend) %>%
                 hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
                 hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
@@ -3532,11 +3533,11 @@ output$variableImportancePlot <- renderHighchart({
 
               legend = if(input$selectObsHazardOOB == 1){FALSE}else{TRUE}
 
-              highchart() %>% hc_exporting(enabled = TRUE, filename = "survivalRFPlot") %>% 
+              highchart() %>% hc_exporting(enabled = TRUE, filename = "cumhazOOBRFPlot") %>% 
                 hc_add_series_list(lst =hazardListOOB) %>%
                 hc_chart(zoomType = "xy", inverted = FALSE) %>%
                 hc_xAxis(categories = NULL, title = list(text = "Time")) %>%
-                hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Survival"))%>%
+                hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Cumulative Hazard OOB"))%>%
                 hc_legend(enabled = legend) %>%
                 hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
                 hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
@@ -3891,6 +3892,48 @@ output$variableImportancePlot <- renderHighchart({
                   hc_add_theme(hc_theme_google())
 
           }
+      
+          else if(input$selectRFPlot == 7){
+            
+            event.info <- get.event.info(randomForestSurvival())
+            
+            km.obj <- matrix(unlist(mclapply(1:length(event.info$time.interest), 
+                                             function(j) {
+                                               c(sum(event.info$time >= event.info$time.interest[j], 
+                                                     na.rm = TRUE), sum(event.info$time[event.info$cens != 
+                                                                                          0] == event.info$time.interest[j], na.rm = TRUE))
+                                             })), ncol = 2, byrow = TRUE)
+            
+            Y <- km.obj[, 1]
+            d <- km.obj[, 2]
+            r <- d/(Y + 1 * (Y == 0))
+            survNelsonAalen <- exp(-cumsum(r))
+            
+            survEnsemble = randomForestSurvival()$survival
+            survMeanEnsemble <- colMeans(survEnsemble, na.rm = TRUE)
+            time = event.info$time.interest
+            
+            
+            survRandomForest = data.frame(survNelsonAalen, survMeanEnsemble)
+            survListOob = list()
+            
+            survListOob[[1]] = list(data = as.matrix(cbind(time, survRandomForest[,1])), name = "Nelson-Aalen Estimator", type = "line")
+            survListOob[[2]] = list(data = as.matrix(cbind(time, survRandomForest[,2])), name = "Overall Ensemble", type = "line")
+            names(survListOob) = NULL
+            
+            
+            highchart() %>% hc_exporting(enabled = TRUE, filename = "survivalRFEnsemblePlot") %>% 
+              hc_add_series_list(lst =survListOob) %>%
+              hc_chart(zoomType = "xy", inverted = FALSE) %>%
+              hc_xAxis(categories = NULL, title = list(text = "Time")) %>%
+              hc_yAxis(startOnTick = FALSE, endOnTick = FALSE, title = list(text = "Survival"))%>%
+              hc_legend(enabled = legend) %>%
+              hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>") %>%
+              hc_plotOptions(line = list(tooltip = list(pointFormat = "<b> {series.name}: </b>{point.y:.3f} <br>")), 
+                             errorbar = list(tooltip = list(pointFormat = "({point.low} - {point.high})"))) %>%
+              hc_add_theme(hc_theme_google())
+            
+          }
         }
 })
  
@@ -4173,8 +4216,9 @@ output$regularizedPlot <- renderHighchart({
      return()
    }
    
+   if(input$runCutoff){
    isolate({
-     if(input$runCutoff){
+     
        
       withProgress(message = 'Finding optimal cutoff...',  detail = 'This may take a while...', value = 1,{
          
@@ -4185,9 +4229,9 @@ output$regularizedPlot <- renderHighchart({
       return(result)
      
      })
-     
-   }
+    
   })
+   }
  })
 
  output$optimalCutoffResult <- DT::renderDataTable({

@@ -1,5 +1,5 @@
 ---
-title: 'compSurv: A Complete Survival Analysis Tool'
+title: 'geneSurv: an interactive tool for survival analysis in genomics research'
 author: "Selcuk Korkmaz"
 date: "November 27, 2016"
 output:
@@ -69,7 +69,7 @@ A Kaplan-Meier analysis can be conducted by applying the following steps:
 
 
 ```{r kaplanMeier, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE, include=FALSE}
-setwd("~/Dropbox/GSD/Studies/Web-Tools(Devel)/compSurv/")
+setwd("~/Dropbox/GSD/Studies/Web-Tools(Devel)/geneSurv/")
 
 library("survival")
 library("KMsurv")
@@ -407,7 +407,7 @@ Desired outputs can be selected by clicking Outputs checkbox. Available outputs 
 
 
 ```{r coxRegression, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE, include=FALSE}
-setwd("~/Dropbox/GSD/Studies/Web-Tools(Devel)/compSurv/")
+setwd("~/Dropbox/GSD/Studies/Web-Tools(Devel)/geneSurv/")
 
     library("DT")
     library("survival")
