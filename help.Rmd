@@ -3,6 +3,8 @@ title: 'geneSurv: an interactive tool for survival analysis in genomics research
 author: "Selcuk Korkmaz"
 date: "February 3, 2017"
 output:
+  pdf_document:
+    toc: yes
   html_document:
     theme: united
     toc: yes
@@ -396,7 +398,7 @@ A Cox regression analysis can be conducted by applying the following steps:
 
 1. Select the analysis method as `Cox Regression` from `Analysis` tab.
 2. Select suitable variables for the analysis, such as `survival time`, `status variable`, `category value for status variable`, and categorical and continuous predictors for the model.
-3. In advanced options, `interaction terms`, `strata terms` and `time dependent covariates` can be added to the model. Moreover, if there are multiple records for observations, users can specify it by clicking `Multiple ID` checkbox. Furthermore, once can choose model selection criteria, as `AIC` or `p-value`, model selection method, as `backward`, `forward` or `stepwise`, reference category, as `first` or `last`, and ties method, as `Efron`, `Breslow` or `exact` and change the `confidence level`.  
+3. In advanced options, `interaction terms`, `strata terms` and `time dependent covariates` can be added to the model. Moreover, if there are multiple records for observations, users can specify it by clicking `Multiple ID` checkbox. Furthermore, one can choose model selection criteria, as `AIC` or `p-value`, model selection method, as `backward`, `forward` or `stepwise`, reference category, as `first` or `last`, and ties method, as `Efron`, `Breslow` or `exact` and change the `confidence level`.  
 4. Click `Run` button to run the analysis.
 
 <img src="images/coxRegressionHelp.jpg" alt="Cox Regression help" align="middle" style="width:800px; height:350;"/>
