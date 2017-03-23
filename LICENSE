@@ -1,7 +1,11 @@
-                   GNU LESSER GENERAL PUBLIC LICENSE
+geneSurv web-tool as a whole is distributed under GPL-3 (General Public License Version 3)
+
+geneSurv web-tool includes other open-source R packages. The following is a list of these packages (full copies of the license aggreement used by these packages are included below):
+
+
+                  GNU LESSER GENERAL PUBLIC LICENSE
                        Version 3, 29 June 2007
                        
-                       geneSurv
 
  Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>
  Everyone is permitted to copy and distribute verbatim copies
