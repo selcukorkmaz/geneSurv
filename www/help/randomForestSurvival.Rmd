@@ -27,10 +27,10 @@ A random survival forests analysis can be conducted by applying the following st
 
       library("randomForestSRC")
       library("pec")
-      library("DT")
+      library("magrittr")
+      library("dplyr")
       library("highcharter")
       library("survival")
-
       data <- read.table("www/data/GSE2034.txt", header=TRUE, sep = "\t")
       survivalTime = "dmfs_time"
       categoricalInput = "ER_IHC"
@@ -253,7 +253,7 @@ Survival predictions for each observation can be obtained. In this table, rows r
   
 
 
-      datatable(survival, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+      DT::datatable(survival, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
       dom = 'Bfrtip',
       buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
       ))
@@ -283,7 +283,7 @@ Out of bag (OOB) survival predictions for each observation can be obtained. In t
     
 
 
-        datatable(survivalOOB, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+        DT::datatable(survivalOOB, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
         dom = 'Bfrtip',
         buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
         ))
@@ -314,7 +314,7 @@ Cumulative hazard predictions for each observation can be obtained. In this tabl
         chfRes = as.data.frame(chfRes)
         colnames(chfRes) = as.character(rf$time.interest)
           
-        datatable(chfRes, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+        DT::datatable(chfRes, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
               dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE))
 
 ```
@@ -346,7 +346,7 @@ Out of bag (OOB) cumulative hazard predictions for each observation can be obtai
             
 
 
-                datatable(chfOOBres, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+                DT::datatable(chfOOBres, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
                 dom = 'Bfrtip',
                 buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
                 ))
@@ -376,7 +376,7 @@ An error rate table, which shows error rate estimations for each tree, can be ob
 
      colnames(errorRates) = c("Number of tree", "Error rate")
 
-     datatable(errorRates, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
+     DT::datatable(errorRates, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
         dom = 'Bfrtip', buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE))
 
 ```
@@ -385,44 +385,22 @@ An error rate table, which shows error rate estimations for each tree, can be ob
 
 ****************************************
 
+#####f. Feature Selection
+
+A feature selection can be performed based on variable importance measure. The feature selection process is as follows:
+
+1) Fit data by RSF model and rank all available genes according to variable importance measure.
+2) Iteratively fit RSF model (do not calculate variable importance), and at each iteration remove a proportion of features from the bottom of the feature importance ranking list (default is 20%).
+3) Calculate the OOB error rate.
+4) Repeat Step 2 until dataset contains only 2 features.
+5) Find the set of features with the minimum number of features such that the OOB error rate is within 1 standard error. 
+
+<img src="images/featureSelect.jpg" alt="Cox Regression help" align="middle" style="width:800px; height:350;"/>
 
 
+An interactive plot can be created for selected features.
 
-#####f. Variable Importance
-
-A variable importance table as well as an interactive plot, which shows relative importance of variables in fitted model, can be obtained.
-
-```{r rsfVarImp, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
-
-   variableImp = data.frame(t(rf$importance))
-
-      variableImp = apply(variableImp, 2, FUN = function(x){
-    
-            as.numeric(formatC(x, digits = 3))
-    
-      })
-
-      variableImp = as.data.frame(variableImp)
-
-        datatable(variableImp, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
-        dom = 'Bfrtip',
-        buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
-        ))
-```
-
-
-```{r rsfVarImpPlot, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
-
-    importance = as.numeric(formatC(rf$importance, digits = 3, format = "f"))
-
-
-      highchart() %>% 
-        hc_chart(type = "column", inverted = TRUE) %>% 
-        hc_xAxis(categories = names(rf$importance)) %>% 
-        hc_add_series(data = importance, name = "Importance") %>%
-        hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>")%>%
-        hc_add_theme(hc_theme_google())
-```
+<img src="images/varImp.jpg" alt="Cox Regression help" align="middle" style="width:800px; height:350;"/>
 
 
 *************************************
@@ -924,3 +902,5 @@ A Cox model can be compared to random survival forests model through an interact
                 
 ```
 
+
+**************************************************

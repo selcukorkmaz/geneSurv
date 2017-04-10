@@ -3,12 +3,12 @@ title: 'geneSurv: an interactive tool for survival analysis in genomics research
 author: "Selcuk Korkmaz"
 date: "February 3, 2017"
 output:
-  pdf_document:
-    toc: yes
   html_document:
     theme: united
     toc: yes
     toc_float: yes
+  pdf_document:
+    toc: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -27,11 +27,16 @@ Cox regression: coefficient estimates, hazard ratios, goodness of fit test, anal
 
 Penalized Cox regression: feature selection using ridge, elastic net and lasso penalization. A cross-validation to investigate the relationship between partial likelihood devaince and lambda values.
 
-Random survival forests: overall survival predictions (Nelson-Aalen estimator, overall ensemble), individual survival predictions (with OOB), individual cumulative hazard predictions (with OOB), error rate, variable importance, and interactive plots including random survival plot, cumulative hazard plot, error rate plot, Cox vs RSF plot
+Random survival forests: overall survival predictions (Nelson-Aalen estimator, overall ensemble), individual survival predictions (with OOB), individual cumulative hazard predictions (with OOB), error rate, feature selection, and interactive plots including random survival plot, cumulative hazard plot, error rate plot, Cox vs RSF plot
 
 Optimal cutoff: determination of optimal cutoff value by maxmizing test statistics, including log-rank, Gehan-Breslow, Tarone-Ware, Peto-Peto, modified Peto-Peto, Flemington-Harrington.
 
 
+---
+output:
+  html_document: default
+  pdf_document: default
+---
 ## 1.Data upload
 
 This tool requires a dataset in `*.txt` format, which is seperated by `comma`, `semicolon`, `space` or `tab` delimiter. First row of dataset must include header. When the appropriate file is uploaded, the dataset will be appear immediately on the main page of the tool. Alternatively users can upload one of the example datasets provided within the tool for testing and understanding the operating logic of the tool.    
@@ -39,6 +44,18 @@ This tool requires a dataset in `*.txt` format, which is seperated by `comma`, `
 <img src="images/dataUpload.jpg" alt="Data upload" align="middle" style="width:800px; height:200px;"/>
 
 <img src="images/dataUploadHelp.jpg" alt="Data upload help" align="middle" style="width:800px; height:251px;"/>
+
+
+### 1.1. Data Pre-processing
+
+An important step of the data analysis in statistics is the data pre-processing. Users can perform some basic data pre-processing steps using this tool, including near zero filtering, centering, scaling and log-transformation (natural logarithm). To perform a data pre-processing; (1) check the "Pre-processing" box, (2) select "Survival time", "Status variable" and variables you wish to exclude from pre-processing (i.e. categorical variables), (3) select one or more pre-processing methods, including near zero filtering, centering, scaling and log-transformation, (4) click "Run pre-process" button to perform the pre-processing.
+
+<img src="images/dataPreProcess2.jpg" alt="Data pre-processing" align="middle" style="width:800px; height:400px;"/>
+
+After the pre-processing, all the selected pre-processing steps will be applied to the dataset and new data set will appear on the main panel of the tool. If there are any variables which have near zero variances, they will be excluded from the dataset and will appear in a new table.
+
+<img src="images/dataPreProcess.jpg" alt="Data pre-processing" align="middle" style="width:800px; height:400px;"/>
+
 
 ## 2. Analysis Methods
 
@@ -1399,44 +1416,22 @@ An error rate table, which shows error rate estimations for each tree, can be ob
 
 ****************************************
 
+#####f. Feature Selection
+
+A feature selection can be performed based on variable importance measure. The feature selection process is as follows:
+
+1) Fit data by RSF model and rank all available genes according to variable importance measure.
+2) Iteratively fit RSF model (do not calculate variable importance), and at each iteration remove a proportion of features from the bottom of the feature importance ranking list (default is 20%).
+3) Calculate the OOB error rate.
+4) Repeat Step 2 until dataset contains only 2 features.
+5) Find the set of features with the minimum number of features such that the OOB error rate is within 1 standard error. 
+
+<img src="images/featureSelect.jpg" alt="Cox Regression help" align="middle" style="width:800px; height:350;"/>
 
 
+An interactive plot can be created for selected features.
 
-#####f. Variable Importance
-
-A variable importance table as well as an interactive plot, which shows relative importance of variables in fitted model, can be obtained.
-
-```{r rsfVarImp, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
-
-   variableImp = data.frame(t(rf$importance))
-
-      variableImp = apply(variableImp, 2, FUN = function(x){
-    
-            as.numeric(formatC(x, digits = 3))
-    
-      })
-
-      variableImp = as.data.frame(variableImp)
-
-        datatable(variableImp, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
-        dom = 'Bfrtip',
-        buttons = c('copy', 'csv', 'excel', 'pdf', 'print'), keys = TRUE
-        ))
-```
-
-
-```{r rsfVarImpPlot, echo=FALSE, eval = TRUE, message=FALSE, warning=FALSE}
-
-    importance = as.numeric(formatC(rf$importance, digits = 3, format = "f"))
-
-
-      highchart() %>% 
-        hc_chart(type = "column", inverted = TRUE) %>% 
-        hc_xAxis(categories = names(rf$importance)) %>% 
-        hc_add_series(data = importance, name = "Importance") %>%
-        hc_tooltip(crosshairs = TRUE, shared = TRUE, headerFormat = "<b>Time: </b>{point.x} <br>")%>%
-        hc_add_theme(hc_theme_google())
-```
+<img src="images/varImp.jpg" alt="Cox Regression help" align="middle" style="width:800px; height:350;"/>
 
 
 *************************************

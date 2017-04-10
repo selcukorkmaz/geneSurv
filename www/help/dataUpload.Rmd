@@ -1,7 +1,23 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
 ## 1.Data upload
 
 This tool requires a dataset in `*.txt` format, which is seperated by `comma`, `semicolon`, `space` or `tab` delimiter. First row of dataset must include header. When the appropriate file is uploaded, the dataset will be appear immediately on the main page of the tool. Alternatively users can upload one of the example datasets provided within the tool for testing and understanding the operating logic of the tool.    
 
-<img src="images/dataUpload.pdf" alt="Data upload" align="middle" style="width:800px; height:200px;"/>
+<img src="images/dataUpload.jpg" alt="Data upload" align="middle" style="width:800px; height:200px;"/>
 
 <img src="images/dataUploadHelp.jpg" alt="Data upload help" align="middle" style="width:800px; height:251px;"/>
+
+
+### 1.1. Data Pre-processing
+
+An important step of the data analysis in statistics is the data pre-processing. Users can perform some basic data pre-processing steps using this tool, including near zero filtering, centering, scaling and log-transformation (natural logarithm). To perform a data pre-processing; (1) check the "Pre-processing" box, (2) select "Survival time", "Status variable" and variables you wish to exclude from pre-processing (i.e. categorical variables), (3) select one or more pre-processing methods, including near zero filtering, centering, scaling and log-transformation, (4) click "Run pre-process" button to perform the pre-processing.
+
+<img src="images/dataPreProcess2.jpg" alt="Data pre-processing" align="middle" style="width:800px; height:400px;"/>
+
+After the pre-processing, all the selected pre-processing steps will be applied to the dataset and new data set will appear on the main panel of the tool. If there are any variables which have near zero variances, they will be excluded from the dataset and will appear in a new table.
+
+<img src="images/dataPreProcess.jpg" alt="Data pre-processing" align="middle" style="width:800px; height:400px;"/>

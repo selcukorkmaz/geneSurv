@@ -135,7 +135,6 @@ cuttOffForSurvival <- function(markers, survivalTime, statusVariable, status, co
           
         }
         
-        
         if(compTest == "petoPeto"){
           
           newData2 = cbind.data.frame("x2" = x,"time2" = time, "event2" = event)

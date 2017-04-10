@@ -122,7 +122,7 @@ if(!is.null(factors)){
         survHat = x$surv
         lowerLimit = x$upper
         upperLimit = x$lower
-        hazard = data.frame(Time = x$time, "Hazard Ratio" = as.numeric(formatC(-log(survHat), digits = 3, format = "f")), Lower = as.numeric(formatC(-log(lowerLimit), digits = 3, format = "f")), Upper = as.numeric(formatC(-log(upperLimit), digits = 3, format = "f")))
+        hazard = data.frame(Time = x$time, Hazard = as.numeric(formatC(-log(survHat), digits = 3, format = "f")), Lower = as.numeric(formatC(-log(lowerLimit), digits = 3, format = "f")), Upper = as.numeric(formatC(-log(upperLimit), digits = 3, format = "f")))
         
         return(hazard)
         
@@ -216,7 +216,7 @@ if(!is.null(factors)){
     summary = summary(compareCurves, rmean = "individual")
   
   if(survivalTable){
-    survivalTableResult = data.frame(summary[c(2:5,7,8,10,9)])
+    survivalTableResult = data.frame(summary[c(2:4,6,8,10,9)])
     survivalTableResult$surv = as.numeric(formatC(survivalTableResult$surv, digits = 3, format = "f"))
     survivalTableResult$std.err = as.numeric(formatC(survivalTableResult$std.err, digits = 3, format = "f"))
     survivalTableResult$upper = as.numeric(formatC(survivalTableResult$upper, digits = 3, format = "f"))
@@ -238,7 +238,7 @@ if(!is.null(factors)){
       upperLimit = survivalTableResult$lower
       
       
-      hazardRatio = data.frame(Time = survivalTableResult$time, Hazard = as.numeric(formatC(-log(survHat), digits = 3, format = "f")))
+      hazardRatio = data.frame(Time = survivalTableResult$time, Hazard = as.numeric(formatC(-log(survHat), digits = 3, format = "f")), Lower = as.numeric(formatC(-log(lowerLimit), digits = 3, format = "f")), Upper = as.numeric(formatC(-log(upperLimit), digits = 3, format = "f")))
       
       
     }else{hazardRatio = NULL}
@@ -279,4 +279,5 @@ if(!is.null(factors)){
 result = list(tableResult = list(caseSummary = caseSummary, meanMedianSurvivalTimes = meanMedian2, quartilesOfSurvivalTimes = quan2), testResult = list(testResults = testResults, survivalTable = survivalTableLastResult, hazardRatio = hazardRatio))
 return(result)
 }
+
 
