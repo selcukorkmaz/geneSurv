@@ -26,6 +26,12 @@ shinyUI(
                                   HTML('<center><img src="images/team.png" width=200 height=200></center>')
 
                  ),
+                 
+                 conditionalPanel(condition="input.tabs1=='Citation'",
+                                  
+                                  HTML('<center><img src="images/cite.png" width=200 height=200></center>')
+                                  
+                 ),
 
                  #conditionalPanel(condition="input.tabs1=='Help'"
 
@@ -45,8 +51,8 @@ shinyUI(
                                   radioButtons("dataInput", "", list("Upload a file" = 2, "Load example data" = 1), selected=2),
 
                                   conditionalPanel(condition="input.dataInput=='1'",
-                                                   h5("Example datasets:"),
-                                                   radioButtons("sampleData", "", list("GSE2034"=1, "GSE21257"=2), selected=1)
+                                                   h5("Example dataset:"),
+                                                   radioButtons("sampleData", "", list("GSE2034"=1), selected=1)
                                   ),
 
                                   conditionalPanel(condition="input.dataInput=='2'",
@@ -642,6 +648,7 @@ shinyUI(
 
                           DT::dataTableOutput('dataUpload'),
                           br(),
+                          h4(textOutput(outputId = "newDataset")),
                           DT::dataTableOutput("nearZeroFeaturesResult")
 
 
@@ -1375,7 +1382,15 @@ shinyUI(
                           HTML('<p><a href="http://gokmenzararsiz.simplesite.com" target="_blank"> <b>Gokmen Zararsiz</b></a><p>'),
                           HTML('<p>Erciyes University Faculty of Medicine <a href="http://www.biostatistics.hacettepe.edu.tr" target="_blank"> Department of Biostatistics</a><p>'),
                           HTML('<p><a href="mailto:gokmenzararsiz@hotmail.com" target="_blank">gokmenzararsiz@hotmail.com</a><p>')
+                 ),
+                 
+                 tabPanel("Citation",
+                          #br(),
+                          HTML('<p><b>To cite geneSurv in publications use:</b><p>'),
+                          HTML('<p><b>Korkmaz S, Göksülük D, Zararsiz G, Karahan S (2017) "geneSurv: An Interactive Web-Based Tool for Survival Analysis in Genomics Research" Computers in Biology and Medicine (Accepted/In press).</b><p>')
+                          
                  )
+                 
 
 
                           ),

@@ -57,18 +57,18 @@ shinyServer(function(input, output, session) {
 
       }
 
-      else if(input$sampleData == 2){
-
-        isolate({
-
-          withProgress(message = 'Data upload in progress...',  detail = 'This may take a while...', value = 1,{
-
-
-            data <- read.table("www/data/GSE21257.txt", header=TRUE, sep = "\t")
-          })
-
-        })
-      }
+      # else if(input$sampleData == 2){
+      #
+      #   isolate({
+      #
+      #     withProgress(message = 'Data upload in progress...',  detail = 'This may take a while...', value = 1,{
+      #
+      #
+      #       data <- read.table("www/data/GSE21257.txt", header=TRUE, sep = "\t")
+      #     })
+      #
+      #   })
+      # }
 
       # else if(input$sampleData == 3){
       #
@@ -131,7 +131,7 @@ shinyServer(function(input, output, session) {
 
   dataN <- reactive({
 
-    if(input$preProcess && input$runProcess){
+      if(input$preProcess && input$runProcess){
 
       dataL = dataLoad()
 
@@ -159,7 +159,15 @@ shinyServer(function(input, output, session) {
 
       if (input$center && input$runProcess){
 
+        if( TRUE %in% sapply(data, is.factor)){
+
+          stop("Dataset contains non-numeric variables. Pre-process can not be applied.")
+        }
+        else{
+
         data = scale(data, center = TRUE, scale = FALSE)
+
+        }
 
       }
 
@@ -185,6 +193,7 @@ shinyServer(function(input, output, session) {
     }
 
     return(dataNew)
+
   })
 
 
@@ -333,7 +342,7 @@ shinyServer(function(input, output, session) {
   observe({
     data_tmp <- dataM()
     if (!is.null(data_tmp)){
-      updateSelectizeInput(session = session, inputId = "statusVariableKM", choices = colnames(data_tmp), selected = colnames(data_tmp)[1])
+      updateSelectizeInput(session = session, inputId = "statusVariableKM", choices = colnames(data_tmp), selected = colnames(data_tmp)[2])
     } else {
       updateSelectizeInput(session = session, inputId = "statusVariableKM", choices = "", selected = "")
     }
@@ -373,7 +382,7 @@ shinyServer(function(input, output, session) {
   observe({
     data_tmp <- dataM()
     if (!is.null(data_tmp)){
-      updateSelectizeInput(session = session, inputId = "statusVariableCox", choices = colnames(data_tmp), selected = colnames(data_tmp[1]))
+      updateSelectizeInput(session = session, inputId = "statusVariableCox", choices = colnames(data_tmp), selected = colnames(data_tmp[2]))
     } else {
       updateSelectizeInput(session = session, inputId = "statusVariableCox", choices = "", selected = "")
     }
@@ -397,11 +406,11 @@ shinyServer(function(input, output, session) {
   #############################################################
 
   observe({
-    updateSelectizeInput(session, "categoricalInput", choices = colnames(dataM()), selected = NULL)
+    updateSelectizeInput(session, "categoricalInput", choices = colnames(dataM()), selected = colnames(dataM())[3])
   })
 
   observe({
-    updateSelectizeInput(session, "continuousInput", choices = colnames(dataM()), selected = NULL)
+    updateSelectizeInput(session, "continuousInput", choices = colnames(dataM()), selected = colnames(dataM())[4])
   })
 
   observe({
@@ -512,7 +521,6 @@ shinyServer(function(input, output, session) {
     updateSelectizeInput(session, "survivalTimeRF", choices = colnames(dataM()), selected = colnames(dataM())[1])
   })
 
-  #############################################################
 
   observe({
     data_tmp <- dataM()
@@ -617,14 +625,14 @@ shinyServer(function(input, output, session) {
 
 
   observe({
-    updateSelectizeInput(session, "selectMarkers", choices = colnames(dataM()), selected = colnames(dataM())[2])
+    updateSelectizeInput(session, "selectMarkers", choices = colnames(dataM()), selected = colnames(dataM())[4])
   })
 
 
   observe({
     data_tmp_Cutoff <- dataM()
     if (!is.null(data_tmp_Cutoff)){
-      updateSelectizeInput(session = session, inputId = "statusVariableCutoff", choices = colnames(data_tmp_Cutoff), selected = colnames(data_tmp_Cutoff)[1])
+      updateSelectizeInput(session = session, inputId = "statusVariableCutoff", choices = colnames(data_tmp_Cutoff), selected = colnames(data_tmp_Cutoff)[2])
     } else {
       updateSelectizeInput(session = session, inputId = "statusVariableCutoff", choices = "", selected = "")
     }
@@ -662,6 +670,14 @@ shinyServer(function(input, output, session) {
 
 
   ###################### Life Table (start) #############################################
+
+  output$newDataset <- renderText({
+    if (input$preProcess && input$nearZero){
+      'New Dataset'
+    }
+  })
+
+
 
   output$descriptivesText <- renderText({
     if (input$run && input$caseSummary){
@@ -1336,6 +1352,8 @@ shinyServer(function(input, output, session) {
 
 
   resultCox <- reactive({
+    tryCatch(
+      {
 
     if(input$runCox){
 
@@ -1392,6 +1410,14 @@ shinyServer(function(input, output, session) {
         })
       })
     }
+
+      },
+
+    error=function(cond) {
+      stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+    }
+    )
+
   })
 
 
@@ -1441,7 +1467,8 @@ shinyServer(function(input, output, session) {
 
 
   displayCoefficientEstimatesReactive <- reactive({
-
+    tryCatch(
+      {
 
     if(is.null(input$categoricalInput) && is.null(input$continuousInput)){
 
@@ -1454,7 +1481,13 @@ shinyServer(function(input, output, session) {
 
       }else{coeffResults = NULL}
 
+    }},
+
+    error=function(cond) {
+      stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
     }
+    )
+
     #coeffResults
 
   })
@@ -1462,12 +1495,19 @@ shinyServer(function(input, output, session) {
 
 
   output$displayCoefficientEstimatesResult <- DT::renderDataTable(server = FALSE, {
+    tryCatch(
+      {
 
     datatable(displayCoefficientEstimatesReactive(), rownames = FALSE, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
       dom = 'Bfrtip',
       buttons =            list('copy', 'print', list(             extend = 'collection',             buttons = c('csv', 'excel', 'pdf'),             text = 'Download'           )), keys = TRUE
     ))
+      },
 
+    error=function(cond) {
+      stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+    }
+    )
   })
 
 
@@ -1475,6 +1515,9 @@ shinyServer(function(input, output, session) {
 
 
   hazardRatioReactiveCox <- reactive({
+
+    tryCatch(
+      {
 
     if(is.null(input$categoricalInput) && is.null(input$continuousInput)){
 
@@ -1489,22 +1532,41 @@ shinyServer(function(input, output, session) {
 
       }else{hrResults = NULL}
     }
+
+  },
+
+  error=function(cond) {
+    stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+  }
+  )
+
     # hrResult
 
   })
 
 
   output$hazardRatioResultCox <- DT::renderDataTable(server = FALSE, {
+    tryCatch(
+      {
 
     datatable(hazardRatioReactiveCox(), rownames= FALSE, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
       dom = 'Bfrtip',
       buttons =            list('copy', 'print', list(             extend = 'collection',             buttons = c('csv', 'excel', 'pdf'),             text = 'Download'           )), keys = TRUE
     ))
+  },
 
+  error=function(cond) {
+    stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+  }
+  )
   })
 
 
   hazardError <- reactive({
+
+    tryCatch(
+      {
+
 
     if(input$createHazardCoxPlot){
 
@@ -1534,9 +1596,19 @@ shinyServer(function(input, output, session) {
 
     }
 
+      },
+
+    error=function(cond) {
+      stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+    }
+    )
+
   })
 
   output$hazardErrorbar <- highcharter::renderHighchart({
+
+    tryCatch(
+      {
 
     if(is.null(input$categoricalInput) && is.null(input$continuousInput)){
 
@@ -1552,11 +1624,21 @@ shinyServer(function(input, output, session) {
       }else{p = NULL}
     }
 
+  },
+
+  error=function(cond) {
+    stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+  }
+  )
+
   })
 
 
 
   goodnessOfFitTestsResultsReactiveCox <- reactive({
+
+    tryCatch(
+      {
 
     if(is.null(input$categoricalInput) && is.null(input$continuousInput)){
 
@@ -1571,20 +1653,36 @@ shinyServer(function(input, output, session) {
       }else{gof = NULL}
     }
     gof
+
+      },
+
+    error=function(cond) {
+      stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+    }
+    )
   })
 
   output$goodnessOfFitTestsRes <- DT::renderDataTable(server = FALSE, {
+    tryCatch(
+      {
 
     datatable(goodnessOfFitTestsResultsReactiveCox(), rownames=FALSE, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
       dom = 'Bfrtip',
       buttons =            list('copy', 'print', list(             extend = 'collection',             buttons = c('csv', 'excel', 'pdf'),             text = 'Download'           )), keys = TRUE
     ))
+      },
 
+    error=function(cond) {
+      stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+    }
+    )
   })
 
 
   analysisOfDevianceResultsReactiveCox <- reactive({
 
+    tryCatch(
+      {
 
     if(is.null(input$categoricalInput) && is.null(input$continuousInput)){
 
@@ -1598,18 +1696,36 @@ shinyServer(function(input, output, session) {
       }else{aod = NULL}
     }
     aod
+
+  },
+
+  error=function(cond) {
+    stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+  }
+  )
   })
 
   output$analysisOfDevianceRes <- DT::renderDataTable(server = FALSE, {
+    tryCatch(
+      {
 
     datatable(analysisOfDevianceResultsReactiveCox(), rownames=FALSE, extensions = c('Buttons','KeyTable', 'Responsive'), options = list(
       dom = 'Bfrtip',
       buttons =            list('copy', 'print', list(             extend = 'collection',             buttons = c('csv', 'excel', 'pdf'),             text = 'Download'           )), keys = TRUE
     ))
+  },
 
+  error=function(cond) {
+    stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+  }
+  )
   })
 
   predictionsReactiveCox <- reactive({
+
+    tryCatch(
+      {
+
 
     if(is.null(input$categoricalInput) && is.null(input$continuousInput)){
 
@@ -1623,19 +1739,35 @@ shinyServer(function(input, output, session) {
       }else{preds = NULL}
     }
     preds
+      },
+
+    error=function(cond) {
+      stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+    }
+    )
   })
 
   output$predictionsCox <- DT::renderDataTable(server = FALSE, {
+    tryCatch(
+      {
 
     datatable(predictionsReactiveCox(), extensions = c('Buttons','KeyTable','Responsive'), options = list(
       dom = 'Bfrtip',
       buttons =            list('copy', 'print', list(             extend = 'collection',             buttons = c('csv', 'excel', 'pdf'),             text = 'Download'           )), keys = TRUE
     ))
+      },
 
+    error=function(cond) {
+      stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+    }
+    )
   })
 
 
   residualsReactiveCox <- reactive({
+
+    tryCatch(
+      {
 
     if(is.null(input$categoricalInput) && is.null(input$continuousInput)){
 
@@ -1648,18 +1780,35 @@ shinyServer(function(input, output, session) {
       }else{residuals = NULL}
     }
     residuals
+
+  },
+
+  error=function(cond) {
+    stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+  }
+  )
   })
 
   output$residualsCox <- DT::renderDataTable(server = FALSE, {
+    tryCatch(
+      {
 
     datatable(residualsReactiveCox(), extensions = c('Buttons','KeyTable','Responsive'), options = list(
       dom = 'Bfrtip',
       buttons =            list('copy', 'print', list(             extend = 'collection',             buttons = c('csv', 'excel', 'pdf'),             text = 'Download'           )), keys = TRUE
     ))
+  },
 
+  error=function(cond) {
+    stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+  }
+  )
   })
 
   martingaleResidualsReactiveCox <- reactive({
+
+    tryCatch(
+      {
 
     if(is.null(input$categoricalInput) && is.null(input$continuousInput)){
 
@@ -1672,18 +1821,33 @@ shinyServer(function(input, output, session) {
       }else{martingale = NULL}
     }
     martingale
+      },
+
+    error=function(cond) {
+      stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+    }
+    )
   })
 
   output$martingaleResidualsCox <- DT::renderDataTable(server = FALSE, {
-
+    tryCatch(
+      {
     datatable(martingaleResidualsReactiveCox(), extensions = c('Buttons','KeyTable','Responsive'), options = list(
       dom = 'Bfrtip',
       buttons =            list('copy', 'print', list(             extend = 'collection',             buttons = c('csv', 'excel', 'pdf'),             text = 'Download'           )), keys = TRUE
     ))
+      },
 
+    error=function(cond) {
+      stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+    }
+    )
   })
 
   schoenfeldResidualsReactiveCox <- reactive({
+
+    tryCatch(
+      {
 
     if(is.null(input$categoricalInput) && is.null(input$continuousInput)){
 
@@ -1697,20 +1861,36 @@ shinyServer(function(input, output, session) {
       }else{schoenfeld = NULL}
     }
     schoenfeld
+
+  },
+
+  error=function(cond) {
+    stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+  }
+  )
   })
 
   output$schoenfeldResidualsCox <- DT::renderDataTable(server = FALSE, {
-
+    tryCatch(
+      {
     datatable(schoenfeldResidualsReactiveCox(), extensions = c('Buttons','KeyTable','Responsive'), options = list(
       dom = 'Bfrtip',
       buttons =            list('copy', 'print', list(             extend = 'collection',             buttons = c('csv', 'excel', 'pdf'),             text = 'Download'           )), keys = TRUE
     ))
+  },
 
+  error=function(cond) {
+    stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+  }
+  )
   })
 
 
 
   dfBetasReactiveCox <- reactive({
+
+    tryCatch(
+      {
 
     if(is.null(input$categoricalInput) && is.null(input$continuousInput)){
 
@@ -1723,14 +1903,30 @@ shinyServer(function(input, output, session) {
       }else{dfbetas = NULL}
     }
     dfbetas
+      },
+
+    error=function(cond) {
+      stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+    }
+    )
   })
 
   output$dfBetasCox <- DT::renderDataTable(server = FALSE, {
+
+    tryCatch(
+      {
+
 
     datatable(dfBetasReactiveCox(), extensions = c('Buttons','KeyTable','Responsive'), options = list(
       dom = 'Bfrtip',
       buttons =            list('copy', 'print', list(             extend = 'collection',             buttons = c('csv', 'excel', 'pdf'),             text = 'Download'           )), keys = TRUE
     ))
+        },
+
+    error=function(cond) {
+      stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+    }
+    )
 
   })
 
@@ -1738,6 +1934,8 @@ shinyServer(function(input, output, session) {
 
 
   phAssumptionReactiveCox <- reactive({
+    tryCatch(
+      {
 
     if(input$runCox){
 
@@ -1746,14 +1944,30 @@ shinyServer(function(input, output, session) {
     }else{ph = NULL}
 
     ph
+  },
+
+  error=function(cond) {
+    stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+  }
+  )
   })
 
   output$phAssumptionCox <- DT::renderDataTable(server = FALSE, {
+
+    tryCatch(
+      {
+
 
     datatable(phAssumptionReactiveCox(), extensions = c('Buttons','KeyTable','Responsive'), options = list(
       dom = 'Bfrtip',
       buttons =            list('copy', 'print', list(             extend = 'collection',             buttons = c('csv', 'excel', 'pdf'),             text = 'Download'           )), keys = TRUE
     ))
+  },
+
+  error=function(cond) {
+    stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+  }
+  )
 
   })
 
@@ -1763,7 +1977,18 @@ shinyServer(function(input, output, session) {
     #n_row = nrow(resultCox()$testResult$displayCoxPh)
     #par(mfrow=c(n_row, 1))
     #lapply(dataset.split, function(x)dhTest(x, qqplot=TRUE))
+
+    tryCatch(
+      {
+
     resultCox()$plotResult
+
+      },
+
+    error=function(cond) {
+      stop("Inappropriate variable selection. Please check your Survival time, Status and Factor variables.")
+    }
+    )
     #}
   })
 
@@ -3029,7 +3254,7 @@ shinyServer(function(input, output, session) {
     # if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
 
     if (input$runRF && input$chRF){
-      'Table 4: Individual Cumulative Hazard Predictions'
+      'Table 3: Individual Cumulative Hazard Predictions'
     }
     # }
   })
@@ -3040,7 +3265,7 @@ shinyServer(function(input, output, session) {
     # if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
 
     if (input$runRF && input$chOobRF){
-      "Table 5: Individual Cumulative Hazard Predictions OOB"
+      "Table 4: Individual Cumulative Hazard Predictions OOB"
     }
     # }
   })
@@ -3050,7 +3275,7 @@ shinyServer(function(input, output, session) {
     # if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
 
     if (input$runRF && input$errorRateRF){
-      "Table 6: Error Rate"
+      "Table 5: Error Rate"
     }
     # }
   })
@@ -3061,7 +3286,7 @@ shinyServer(function(input, output, session) {
     # if(!is.null(input$categoricalInputRF) || !is.null(input$categoricalInputRF)){
 
     if (input$runRF && input$varImp){
-      "Table 7: Feature selection based on variable importance"
+      "Table 6: Feature selection based on variable importance"
     }
     # }
   })
@@ -3070,7 +3295,8 @@ shinyServer(function(input, output, session) {
 
 
   randomForestSurvival <- reactive({
-
+    tryCatch(
+      {
     if(input$runRF){
 
       isolate({
@@ -3337,6 +3563,12 @@ shinyServer(function(input, output, session) {
         })
       })
     }
+
+      },
+    error=function(cond) {
+      stop("Inappropriate variable selection. Please check your Survival time and make sure it is a numeric variable. Moreover, try to add categorical and continuous variables separately by unchecking 'Include all variables' option.")
+    })
+
   })
 
 
@@ -4444,6 +4676,7 @@ shinyServer(function(input, output, session) {
 
   regularCoxResult <- reactive({
 
+    tryCatch({
     if(input$runRegularized){
       isolate({
 
@@ -4554,6 +4787,11 @@ shinyServer(function(input, output, session) {
       })
 
     }
+
+  },
+  error=function(cond) {
+    stop("Inappropriate variable selection. Please check your Survival time (make sure it is a numeric variable) and status variable (make sure it is a factor variable). Moreover, try to add categorical and continuous variables separately by unchecking 'Include all variables' option.")
+  })
   })
 
 
