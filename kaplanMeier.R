@@ -111,22 +111,23 @@ if(!is.null(factors)){
   summary = summary(compareCurves, rmean = "individual")
 
   if(survivalTable){
-    survivalTableResult = data.frame(summary[c(2:5,7,8,10,9)])
-    survivalTableResult$surv = as.numeric(formatC(survivalTableResult$surv, digits = 3, format = "f"))
-    survivalTableResult$std.err = as.numeric(formatC(survivalTableResult$std.err, digits = 3, format = "f"))
-    survivalTableResult$upper = as.numeric(formatC(survivalTableResult$upper, digits = 3, format = "f"))
-    survivalTableResult$lower = as.numeric(formatC(survivalTableResult$lower, digits = 3, format = "f"))
-
-    survivalTableResult = split(survivalTableResult[-5], survivalTableResult$strata)
+    
+    survivalTableResult = data.frame(summary[c(2:4,8,6,9,11,10)])
+    survivalTableResult$surv = as.numeric(formatC(summary$surv, digits = 3, format = "f"))
+    survivalTableResult$std.err = as.numeric(formatC(summary$std.err, digits = 3, format = "f"))
+    survivalTableResult$upper = as.numeric(formatC(summary$upper, digits = 3, format = "f"))
+    survivalTableResult$lower = as.numeric(formatC(summary$lower, digits = 3, format = "f"))
+    
+    survivalTableResult = split(survivalTableResult[-4], survivalTableResult$strata)
     names(survivalTableResult) = levels(factors)
-
+    
     survivalTableLastResult = lapply(survivalTableResult, function(x)
     {
       colnames(x) = c("Time", "Number at risk", "Number of event", "Cumulative probability of surviving", "S.E.", "Lower limit", "Upper limit")
       return(x)
     }
     )
-
+    
   }else{
     survivalTableLastResult = NULL
   }
